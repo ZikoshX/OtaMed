@@ -18,6 +18,13 @@
 	   </dict>
      </array>
     <!-- End of the Google Sign-in Section -->
+	<key>NSPhotoLibraryUsageDescription</key>
+<string>Your message to the user explaining why you need the photo library</string>
+<key>NSCameraUsageDescription</key>
+<string>Your message to the user explaining why you need the camera</string>
+<key>NSMicrophoneUsageDescription</key>
+<string>Your message to the user explaining why you need the microphone</string>
+
 	<key>NSAppleIDUsageDescription</key>
     <string>Sign in to your app with Apple ID.</string>
 	<key>CFBundleDevelopmentRegion</key>

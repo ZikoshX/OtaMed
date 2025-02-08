@@ -7,7 +7,7 @@ class TextFieldInput extends StatelessWidget {
   final IconData icon;
    final Function(String)? onChanged; 
   
-  const TextFieldInput({super.key, required this.textEditingController, this.isPass=false, required this.hintText, required this.icon, this.onChanged,  });
+  const TextFieldInput({super.key, required this.textEditingController, this.isPass=false, required this.hintText, required this.icon, this.onChanged, required Color iconColor,  });
 
   @override
   Widget build(BuildContext context) {

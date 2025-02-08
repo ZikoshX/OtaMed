@@ -1,0 +1,12 @@
+{
+    "@@locale": "ru",
+    "language": "Russian",
+    "settings": "Настройки",
+    "account": "Аккаунт",
+    "personal_info": "Персональные данные",
+    "notifications": "Уведомления",
+    "dark_mode": "Черный фон",
+    "help": "Помощь",
+    "logout": "Выйти"
+
+}

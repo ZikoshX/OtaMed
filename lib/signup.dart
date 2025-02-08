@@ -5,6 +5,7 @@ import 'package:flutter_application_1/login.dart';
 import 'package:flutter_application_1/widget/button.dart';
 import 'package:flutter_application_1/widget/snackbar.dart';
 import 'package:flutter_application_1/widget/text_field.dart';
+//import 'package:flutter_application_1/personal_info.dart';
 
 class Signup extends StatefulWidget {
   const Signup({super.key});
@@ -17,6 +18,9 @@ class _SignupState extends State<Signup> {
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
   TextEditingController nameController = TextEditingController();
+
+ 
+
   bool isLoading = false;
   String emailError = '';
   String passwordError = '';
@@ -74,9 +78,10 @@ class _SignupState extends State<Signup> {
   @override
   Widget build(BuildContext context) {
     double height = MediaQuery.of(context).size.height;
-
+    final theme = Theme.of(context); 
+    final colorScheme = theme.colorScheme; 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -134,8 +139,9 @@ class _SignupState extends State<Signup> {
                     
                     TextFieldInput(
                       textEditingController: nameController,
-                      hintText: "Name",
+                      hintText: "Full Name",
                       icon: Icons.person,
+                      iconColor: colorScheme.onSurface,
                       onChanged: (value) {
                         setState(() {
                           nameError = "";
@@ -150,6 +156,7 @@ class _SignupState extends State<Signup> {
                       textEditingController: emailController,
                       hintText: "Email",
                       icon: Icons.email,
+                      iconColor: colorScheme.onSurface,
                       onChanged: (value) {
                         setState(() {
                           emailError = "";
@@ -177,6 +184,7 @@ class _SignupState extends State<Signup> {
                       textEditingController: passwordController,
                       hintText: "Password",
                       icon: Icons.lock,
+                      iconColor: colorScheme.onSurface,
                       onChanged: (value) {
                         setState(() {
                           passwordError = "";
@@ -198,7 +206,7 @@ class _SignupState extends State<Signup> {
 ),
                    
                     SizedBox(height: 20),
-                    MyButton(onTab: signUp, text: "Sign Up"),
+                    MyButton(onTab: signUp, text: "Sign Up", color: colorScheme.primary, ),
                   ],
                 ),
               ),

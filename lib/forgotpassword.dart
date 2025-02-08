@@ -35,8 +35,10 @@ class _ForgotPasswordState extends State<ForgotPassword> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); 
+    final colorScheme = theme.colorScheme; 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(title: Text("Reset Password")),
       body: Padding(
         padding: const EdgeInsets.only(bottom: 90),
@@ -56,6 +58,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
               textEditingController: emailController,
               hintText: "Email",
               icon: Icons.email,
+              iconColor: colorScheme.onSurface,
             ),
             SizedBox(
               width: 120,
@@ -63,6 +66,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
               child: MyButton(
               onTab: resetPassword,
                    text: isLoading ? "Loading..." : "Send",
+                  color: colorScheme.primary, 
                ),
             ),
                   ],

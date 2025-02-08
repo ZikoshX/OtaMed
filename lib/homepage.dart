@@ -12,6 +12,7 @@ class Homepage extends StatefulWidget {
 class _HomepageState extends State<Homepage> {
   final user = FirebaseAuth.instance.currentUser;
   
+  
   signout() async {
   await FirebaseAuth.instance.signOut();
   Navigator.pushReplacement(
@@ -25,7 +26,8 @@ class _HomepageState extends State<Homepage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Homepage")),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(title: Text("OtaMed")),
       body: Center(child: Text('${user!.email}')),
       floatingActionButton: FloatingActionButton(
         onPressed: signout,

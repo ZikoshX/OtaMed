@@ -89,10 +89,12 @@ class _LoginState extends State<Login> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); 
+    final colorScheme = theme.colorScheme; 
     double height = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor:  colorScheme.surface,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -155,6 +157,7 @@ class _LoginState extends State<Login> {
                           textEditingController: email,
                           hintText: "Email",
                           icon: Icons.email,
+                          iconColor: colorScheme.onSurface,
                           onChanged: (value) {
                             setState(() {
                               emailError = "";
@@ -191,6 +194,7 @@ class _LoginState extends State<Login> {
                           hintText: "Password",
                           isPass: true,
                           icon: Icons.lock,
+                          iconColor: colorScheme.onSurface,
                           onChanged: (value) {
                             setState(() {
                               passwordError = "";
@@ -245,6 +249,7 @@ class _LoginState extends State<Login> {
                     MyButton(
                       onTab: loginUsers,
                       text: isLoading ? "Loading..." : "Log in",
+                      color: colorScheme.primary, 
                     ),
                      Text("──── or ────",
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: Colors.grey),
@@ -280,7 +285,7 @@ class _LoginState extends State<Login> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: Colors.black),
+                border: Border.all(color: colorScheme.onSurface),
               ),
             child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -289,7 +294,7 @@ class _LoginState extends State<Login> {
               SizedBox(width: 10),
               Text(
                 "Sign in with Google",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500,color: colorScheme.onSurface,),
               ),
             ],
           ),
@@ -323,7 +328,7 @@ class _LoginState extends State<Login> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: Colors.black),
+                border: Border.all(color: colorScheme.onSurface),
               ),
             child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -332,7 +337,7 @@ class _LoginState extends State<Login> {
               SizedBox(width: 10),
               Text(
                 "Sign in with Apple ID",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500,color: colorScheme.onSurface,),
               ),
             ],
           ),
