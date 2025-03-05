@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/Services/authentication.dart';
-import 'package:flutter_application_1/homepage.dart';
 import 'package:flutter_application_1/login.dart';
 import 'package:flutter_application_1/widget/button.dart';
 import 'package:flutter_application_1/widget/snackbar.dart';
@@ -25,6 +24,7 @@ class _SignupState extends State<Signup> {
   String emailError = '';
   String passwordError = '';
   String nameError = '';
+  String successMessage = '';
 
   @override
   void dispose() {
@@ -39,16 +39,17 @@ class _SignupState extends State<Signup> {
       String res = await AuthServices().signUp(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
-        name: nameController.text.trim(),
+        name: nameController.text.trim(), 
       );
       if (!mounted) return;
 
       if (res == 'success') {
         setState(() {
+           successMessage = "Registration successful! Redirecting to login...";
           isLoading = true;
         });
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const Homepage()),
+          MaterialPageRoute(builder: (context) => const Login()),
         );
       } else {
         setState(() {
@@ -77,7 +78,6 @@ class _SignupState extends State<Signup> {
 
   @override
   Widget build(BuildContext context) {
-    double height = MediaQuery.of(context).size.height;
     final theme = Theme.of(context); 
     final colorScheme = theme.colorScheme; 
     return Scaffold(
@@ -94,12 +94,12 @@ class _SignupState extends State<Signup> {
                   children: [
                     Center(
                       child: Image.asset(
-                        'images/photo.jpeg',
-                        height: 200,
-                        width: 200,
+                        'images/logoapp.png',
+                        height: 260,
+                        width: 260,
                       ),
                     ),
-                    SizedBox(height: height / 25),
+                    SizedBox(height: 10),
                     Center(
                       child: const Text(
                         "Sign Up",
@@ -125,7 +125,7 @@ class _SignupState extends State<Signup> {
                             );
                           },
                           child: Text(
-                            " Log In",
+                            " Login",
                             style: TextStyle(
                               color: Colors.blue,
                               fontWeight: FontWeight.bold,
@@ -204,9 +204,20 @@ class _SignupState extends State<Signup> {
       ),
   ],
 ),
+                  if (successMessage.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Text(
+                          successMessage,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.green, fontSize: 15, fontWeight: FontWeight.bold),
+                        ),
+                      ),
                    
                     SizedBox(height: 20),
-                    MyButton(onTab: signUp, text: "Sign Up", color: colorScheme.primary, ),
+                    MyButton(onTab: signUp, 
+                     text: isLoading ? "Signing Up..." : "Sign Up",
+                    color: colorScheme.primary, ),
                   ],
                 ),
               ),

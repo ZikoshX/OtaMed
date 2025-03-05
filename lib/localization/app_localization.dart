@@ -4,37 +4,36 @@ import 'package:flutter/services.dart';
 
 class AppLocalizations {
   final Locale locale;
+  static AppLocalizations? of(BuildContext context) {
+    return Localizations.of<AppLocalizations>(context, AppLocalizations);
+  }
+
   AppLocalizations(this.locale);
 
-  static AppLocalizations of(BuildContext context) {
-    return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
+  late Map<String, String> _localizedStrings;
+
+  Future<void> load() async {
+    String jsonString =
+        await rootBundle.loadString('lib/l10n/app_${locale.languageCode}.arb');
+    Map<String, dynamic> jsonMap = json.decode(jsonString);
+    _localizedStrings =
+        jsonMap.map((key, value) => MapEntry(key, value.toString()));
+  }
+
+  String translate(String key) {
+    return _localizedStrings[key] ?? key;
   }
 
   static const LocalizationsDelegate<AppLocalizations> delegate =
       _AppLocalizationsDelegate();
-
-  Map<String, String>? _localizedStrings;
-
-  Future<bool> load() async {
-    String jsonString =
-        await rootBundle.loadString('lib/l10n/${locale.languageCode}.json');
-    Map<String, dynamic> jsonMap = json.decode(jsonString);
-    _localizedStrings =
-        jsonMap.map((key, value) => MapEntry(key, value.toString()));
-    return true;
-  }
-
-  String translate(String key) {
-    return _localizedStrings![key] ?? key;
-  }
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
+
   @override
-  bool isSupported(Locale locale) => ['en', 'ru', 'kz'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => ['en', 'ru', 'kk'].contains(locale.languageCode);
 
   @override
   Future<AppLocalizations> load(Locale locale) async {
@@ -44,5 +43,6 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool shouldReload(_AppLocalizationsDelegate old) => false;
+  bool shouldReload(_AppLocalizationsDelegate old) => true;
+    
 }

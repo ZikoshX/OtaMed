@@ -4,6 +4,7 @@ import 'package:flutter_application_1/Services/authentication.dart';
 import 'package:flutter_application_1/forgotpassword.dart';
 import 'package:flutter_application_1/main.dart';
 import 'package:flutter_application_1/signup.dart';
+import 'package:flutter_application_1/admin_page.dart';
 import 'package:flutter_application_1/widget/button.dart';
 import 'package:flutter_application_1/widget/snackbar.dart';
 import 'package:flutter_application_1/widget/text_field.dart';
@@ -25,6 +26,7 @@ class _LoginState extends State<Login> {
   String passwordError = '';
   String inError = "";
   bool isLoading = false;
+  bool isEmailLoading = false;
   bool isAppleLoading = false;
 
   @override
@@ -37,6 +39,7 @@ class _LoginState extends State<Login> {
   void loginUsers() async {
     setState(() {
       isLoading = true;
+      isAppleLoading = false;
       emailError = "";
       passwordError = "";
       inError = "";
@@ -55,13 +58,18 @@ class _LoginState extends State<Login> {
         });
         return;
       }
-      String res = await AuthServices().loginUser(
+      String res = await AuthServices().login(
         email: email.text.trim(),
         password: password.text.trim(),
       );
       if (!mounted) return;
+       if (res == 'admin') {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const AdminScreen()),
+      );
+    }
 
-      if (res == 'success') {
+      if (res == 'user') {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
@@ -86,15 +94,15 @@ class _LoginState extends State<Login> {
       });
     }
   }
+  
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context); 
-    final colorScheme = theme.colorScheme; 
-    double height = MediaQuery.of(context).size.height;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor:  colorScheme.surface,
+      backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -105,14 +113,13 @@ class _LoginState extends State<Login> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Center(
-                      child: Image.asset(
-                        'images/logo.webp',
-                        height: 200,
-                        width: 200,
+                   Image.asset(
+                         'images/logoapp.png',   
+                        height: 250,
+                        width: 250,
                       ),
-                    ),
-                    SizedBox(height: height / 30),
+                    
+                    SizedBox(height: 5),
                     Center(
                       child: const Text(
                         "Login",
@@ -249,103 +256,129 @@ class _LoginState extends State<Login> {
                     MyButton(
                       onTab: loginUsers,
                       text: isLoading ? "Loading..." : "Log in",
-                      color: colorScheme.primary, 
+                      color: colorScheme.primary,
                     ),
-                     Text("──── or ────",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: Colors.grey),
-                     textAlign: TextAlign.center,),
-                     const SizedBox(height: 10),
-                    Column(                    
-  mainAxisAlignment: MainAxisAlignment.center,
-  children: [
-    isLoading
-        ? const CircularProgressIndicator()
-        : GestureDetector(
-            onTap: () async {
-              setState(() {
-                isLoading = true;
-              });
-              UserCredential? userCredential = await AuthServices().signinWithGoogle();
+                    Text(
+                      "──── or ────",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.normal,
+                        color: Colors.grey,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        isEmailLoading
+                            ? const CircularProgressIndicator()
+                            : GestureDetector(
+                              onTap: () async {
+                                setState(() {
+                                  isEmailLoading = true;
+                                });
+                                UserCredential? userCredential =
+                                    await AuthServices().signinWithGoogle();
 
-              if (userCredential != null) {
-                Navigator.pushReplacement(
-                  // ignore: use_build_context_synchronously
-                  context,
-                  MaterialPageRoute(builder: (context) => HomeScreen()),
-                );
-              }
-              setState(() {
-                isLoading = false;
-              });
-            },
-            
-            child: Container(
-              width: 250,
-              height: 50,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: colorScheme.onSurface),
-              ),
-            child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                 children: [
-              Image.asset("images/googleit.jpg", height: 24), 
-              SizedBox(width: 10),
-              Text(
-                "Sign in with Google",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500,color: colorScheme.onSurface,),
-              ),
-            ],
-          ),
-                
-              ),
-            ),
-    const SizedBox(height: 10),
-    if (Platform.isIOS)
-      isAppleLoading
-          ? const CircularProgressIndicator()
-          : GestureDetector(
-              onTap: () async {
-                setState(() {
-                  isLoading = true;
-                });
-                UserCredential? userCredential = await AuthServices().signInWithApple();
-                if (userCredential != null) {
-                  Navigator.pushReplacement(
-                     // ignore: use_build_context_synchronously
-                    context,
-                    MaterialPageRoute(builder: (context) => HomeScreen()),
-                  );
-                }
-                setState(() {
-                  isLoading = false;
-                });
-              },
-               child: Container(
-              width: 250,
-              height: 50,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: colorScheme.onSurface),
-              ),
-            child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                 children: [
-              Image.asset("images/id.jpeg", height: 24), 
-              SizedBox(width: 10),
-              Text(
-                "Sign in with Apple ID",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500,color: colorScheme.onSurface,),
-              ),
-            ],
-          ),
-                
-              ),
-            ),
-           ],
-        ),
+                                if (userCredential != null) {
+                                  Navigator.pushReplacement(
+                                    // ignore: use_build_context_synchronously
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => HomeScreen(),
+                                    ),
+                                  );
+                                }
+                                setState(() {
+                                  isEmailLoading = false;
+                                });
+                              },
+
+                              child: Container(
+                                width: 250,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(30),
+                                  border: Border.all(
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Image.asset(
+                                      "images/googleit.jpg",
+                                      height: 24,
+                                    ),
+                                    SizedBox(width: 10),
+                                    Text(
+                                      "Sign in with Google",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                        color: colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        const SizedBox(height: 10),
+                        if (Platform.isIOS)
+                          isAppleLoading
+                              ? const CircularProgressIndicator()
+                              : GestureDetector(
+                                onTap: () async {
+                                  setState(() {
+                                    isAppleLoading = true;
+                                  });
+                                  UserCredential? userCredential =
+                                      await AuthServices().signInWithApple();
+                                  if (userCredential != null) {
+                                    Navigator.pushReplacement(
+                                      // ignore: use_build_context_synchronously
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => HomeScreen(),
+                                      ),
+                                    );
+                                  }
+                                  setState(() {
+                                    isAppleLoading = false;
+                                  });
+                                },
+
+                                child: Container(
+                                  width: 250,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(30),
+                                    border: Border.all(
+                                      color: colorScheme.onSurface,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Image.asset("images/id.jpeg", height: 24),
+                                      SizedBox(width: 10),
+                                      Text(
+                                        "Sign in with Apple ID",
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                          color: colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                      ],
+                    ),
                   ],
                 ),
               ),

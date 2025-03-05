@@ -2,22 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_application_1/personal_info.dart';
 import 'package:flutter_application_1/widget/dart_mode_switch.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart' as riverpod;
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:logger/logger.dart';
 import 'package:flutter_application_1/login.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_application_1/localization/app_localization.dart';
+import 'package:flutter_application_1/localization/language_provider.dart';
 
 var logger = Logger();
 
-class Settings extends StatefulWidget {
-  const Settings({super.key});
+class SettingPage extends riverpod.ConsumerStatefulWidget {
+  const SettingPage({super.key});
 
   @override
-  State<Settings> createState() => _SettingsState();
+  ConsumerState<SettingPage> createState() => _SettingPage();
 }
 
-class _SettingsState extends State<Settings> {
-  String selectedLanguage = "EN";
-  bool isDarkMode = false;
+class _SettingPage extends ConsumerState<SettingPage> {
+  String? selectedLanguage = "EN";
   String userName = "";
   String imageUrl = "";
 
@@ -40,7 +43,7 @@ class _SettingsState extends State<Settings> {
         if (userData.exists) {
           setState(() {
             userName = userData["name"] ?? "Unknown User";
-            imageUrl = userData["profileImage"] ?? "Unknown Image";
+            imageUrl = userData["profileImage"] ?? "";
           });
         } else {
           logger.w("User data does not exist in Firestore");
@@ -64,251 +67,245 @@ class _SettingsState extends State<Settings> {
 
   @override
   Widget build(BuildContext context) {
+    final languageNotifier = ref.read(languageProvider.notifier);
+    final appLocalizations = AppLocalizations.of(context);
+
+    if (appLocalizations == null) {
+      return Scaffold(body: Center(child: Text('Localizations not available')));
+    }
+
+    final theme = Theme.of(context);
+    final textColor = theme.textTheme.bodyMedium?.color;
+
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 45.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Settings",
-              style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              "Account",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 20),
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => PersonalInfo()),
-                );
-              },
-              child: SizedBox(
-                width: double.infinity,
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 35,
-                      backgroundImage:  NetworkImage(imageUrl),
-                    ),
-                    const SizedBox(width: 25),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          userName,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        Text(
-                          "Personal Info",
-                          style: TextStyle(fontSize: 14, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      child: const Icon(Icons.chevron_right_outlined),
-                    ),
-                  ],
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 15.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 15.0),
+                child: Text(
+                  appLocalizations.translate('account'),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w500,
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 30),
-            Text(
-              "Settings",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: Row(
+              buildSectionBlock(
+                context,
+                title: '',
                 children: [
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.lightGreen.shade100,
-                    ),
-                    child: const Icon(Icons.public, color: Colors.lightGreen),
-                  ),
-                  const SizedBox(width: 20),
-                  Text(
-                    "Language",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                  const Spacer(),
-                  Text(
-                    selectedLanguage,
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                  PopupMenuButton<String>(
-                    onSelected: (String value) {
-                      setState(() {
-                        selectedLanguage = value;
-                      });
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => PersonalInfo()),
+                      );
                     },
-                    itemBuilder: (BuildContext context) {
-                      return [
-                        PopupMenuItem<String>(
-                          value: "KZ",
-                          child: Text("Kazakh"),
-                        ),
-                        PopupMenuItem<String>(
-                          value: "RU",
-                          child: Text("Russian"),
-                        ),
-                        PopupMenuItem<String>(
-                          value: "EN",
-                          child: Text("English"),
-                        ),
-                      ];
-                    },
-                    child: Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      child: const Icon(Icons.arrow_drop_down_sharp),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 25),
-            SizedBox(
-              width: double.infinity,
-              child: Row(
-                children: [
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.blue.shade100,
-                    ),
-                    child: const Icon(
-                      Icons.notification_add,
-                      color: Colors.blue,
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                  Text(
-                    "Notifications",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                  const Spacer(),
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: const Icon(Icons.chevron_right_outlined),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 25),
-            SizedBox(
-  width: double.infinity,
-  child: Row(
-    children: [
-      Container(
-        width: 60,
-        height: 60,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.purple.shade100,
-        ),
-        child: const Icon(Icons.dark_mode, color: Colors.purple),
-      ),
-      const SizedBox(width: 20),
-      Text(
-        "Dark Mode",
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-      ),
-      const Spacer(), 
-      DarkModeSwitch(), 
-    ],
-  ),
-),
-            const SizedBox(height: 25),
-            SizedBox(
-              width: double.infinity,
-              child: Row(
-                children: [
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.orange.shade100,
-                    ),
-                    child: const Icon(Icons.help, color: Colors.orange),
-                  ),
-                  const SizedBox(width: 20),
-                  Text(
-                    "Help",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 25),
-            SizedBox(
-              width: double.infinity,
-              child: GestureDetector(
-                onTap: signout,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    splashColor: Colors.red.shade200,
-                    highlightColor: Colors.red.shade300,
                     child: Row(
-                      children: [
-                        Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.red.shade100,
+                        children: [
+                          CircleAvatar(
+                            radius: 35,
+                            backgroundImage:
+                                imageUrl.isNotEmpty
+                                    ? NetworkImage(imageUrl)
+                                    : AssetImage("images/photo.jpeg")
+                                        as ImageProvider,
                           ),
-                          child: const Icon(
-                            Icons.exit_to_app,
-                            color: Colors.red,
+                          const SizedBox(width: 25),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                userName.isNotEmpty ? userName : "User",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500,
+                                  color: textColor,
+                                ),
+                              ),
+                              Text(
+                                appLocalizations.translate('personal_info'),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 20),
-                        Text(
-                          "Log out",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
+                          const Spacer(),
+                          Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: const Icon(Icons.chevron_right_outlined),
                           ),
-                        ),
-                        const Spacer(),
-                      ],
+                        ],
+                     
                     ),
+                  ),
+                ], 
+              ),
+              const SizedBox(height: 20),
+                Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  appLocalizations.translate('settings'),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w500,
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
                   ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 13),
+              buildSectionBlock(
+                context,
+                title: '',
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.public, color: Colors.blueGrey),
+                    title: Text(
+                      appLocalizations.translate('language'),
+                      style: TextStyle(color: textColor),
+                    ),
+                    trailing: DropdownButton<String>(
+                      value: selectedLanguage,
+                      onChanged: (String? newValue) {
+                        if (newValue != null) {
+                          setState(() {
+                            selectedLanguage = newValue;
+                          });
+                          languageNotifier.changeLanguage(
+                            Locale(newValue.toLowerCase()),
+                          );
+                        }
+                      },
+                      dropdownColor:
+                          theme.dropdownMenuTheme.menuStyle?.backgroundColor
+                              ?.resolve({}) ??
+                          Colors.white,
+                      style: TextStyle(color: textColor, fontSize: 16),
+                      iconEnabledColor: theme.iconTheme.color,
+                      items: [
+                        DropdownMenuItem(
+                          value: "EN",
+                          child: Text(
+                            "English",
+                            style: TextStyle(color: textColor),
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: "RU",
+                          child: Text(
+                            "Русский",
+                            style: TextStyle(color: textColor),
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: "KK",
+                          child: Text(
+                            "Қазақша",
+                            style: TextStyle(color: textColor),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(color: Colors.grey.shade400),
+                  ListTile(
+                    leading: Icon(Icons.notifications, color: Colors.blueGrey),
+                    title: Text(
+                      appLocalizations.translate('notifications'),
+                      style: TextStyle(color: textColor),
+                    ),
+                  ),
+                  Divider(color: Colors.grey.shade400),
+                  ListTile(
+                    leading: Icon(Icons.dark_mode, color: Colors.blueGrey),
+                    title: Text(
+                      appLocalizations.translate('dark_mode'),
+                      style: TextStyle(color: textColor),
+                    ),
+                    trailing: DarkModeSwitch(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  border: Border.all(color: Colors.grey.shade400),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: ListTile(
+                  leading: Icon(Icons.help, color: Colors.blueGrey),
+                  title: Text(
+                    appLocalizations.translate('help'),
+                    style: TextStyle(color: textColor),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  border: Border.all(color: Colors.grey.shade400),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: ListTile(
+                  leading: Icon(Icons.exit_to_app, color: Colors.blueGrey),
+                  title: Text(
+                    appLocalizations.translate('logout'),
+                    style: TextStyle(color: textColor),
+                  ),
+                  onTap: signout,
+                ),
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget buildSectionBlock(
+    BuildContext context, {
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border.all(color: Colors.grey.shade400),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+           if (title.isNotEmpty) ...[
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w500,
+              color: Theme.of(context).textTheme.bodyMedium?.color,
+            ),
+          ),
+          const SizedBox(height: 10),
+           ],
+          ...children,
+        ],
       ),
     );
   }

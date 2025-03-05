@@ -1,3 +1,6 @@
 arb-dir: lib/l10n
-template-arb-file: app_en.json
+template-arb-file: app_en.arb
 ouput-localization-file: app_localizations.dart
+output-class: AppLocalizations
+nullable-getter: false
+synthetic-package: false
