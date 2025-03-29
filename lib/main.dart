@@ -18,6 +18,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:logger/logger.dart';
 
+
 var logger = Logger();
 
 void main() async {
@@ -26,11 +27,10 @@ void main() async {
   FirebaseAuth.instance.setLanguageCode(
     PlatformDispatcher.instance.locale.languageCode,
   );
-
-  runApp(const ProviderScope(child: MyApp()));
+    runApp(
+    const ProviderScope(child: MyApp()), 
+  );
 }
-
-
 
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
@@ -69,29 +69,70 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-  final List<Widget> _pages = [
-    const Homepage(),
-    const AiChat(),
-    const Favorites(),
-    const SettingPage(),
-  ];
+  List<Map<String, dynamic>> favoriteClinics = [];
+  List<Map<String, String>> filteredClinics = [];
+  final Set<String> favoriteClinicNames = {}; 
+   int selectedIndex = 0;
 
-  void _onItemTapped(int index) {
+  late List<Widget> _pages;
+
+
+ @override
+  void initState() {
+    super.initState();
+    _pages = [
+      Homepage(
+        favoriteClinics: favoriteClinicNames,
+        toggleFavorite: toggleFavorite,
+        filteredClinics: filteredClinics,
+        updateFilteredClinics: updateFilteredClinics,
+      ),
+      AiChat(),
+      FavoritesPage(
+        favoriteClinics: favoriteClinics,
+        toggleFavorite: toggleFavorite,
+      ),
+      const SettingPage(),
+    ];
+  }
+
+
+ void toggleFavorite(String clinicName) {
+  setState(() {
+    if (favoriteClinicNames.contains(clinicName)) {
+      favoriteClinicNames.remove(clinicName);
+    } else {
+      favoriteClinicNames.add(clinicName);
+    }
+    
+    logger.w("Updated Favorites: $favoriteClinicNames"); 
+  });
+}
+
+
+   void updateFilteredClinics(List<Map<String, String>> newClinics) {
+    setState(() {
+      filteredClinics = newClinics;
+    });
+  }
+
+ void changeTabIndex(int index) {
     setState(() {
       _selectedIndex = index;
     });
   }
+  
 
-
-
-
- @override
+@override
 Widget build(BuildContext context) {
   return Scaffold(
-    body: _pages[_selectedIndex],
+    body: IndexedStack( 
+      index: _selectedIndex,
+      children: _pages,  
+    ),
     bottomNavigationBar: BottomNavigationBar(
       currentIndex: _selectedIndex,
-      onTap: _onItemTapped,
+      onTap: changeTabIndex,
       selectedItemColor: Colors.blue,
       unselectedItemColor: Colors.grey,
       items: const [

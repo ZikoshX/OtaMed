@@ -49,4 +49,14 @@
             <data android:mimeType="text/plain"/>
         </intent>
     </queries>
+      <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http"/>
+            <data android:scheme="https"/>
+        </intent>
+    </queries>
+
+    <uses-permission android:name="android.permission.INTERNET"/>
+    
 </manifest>

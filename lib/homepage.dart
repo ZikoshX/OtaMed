@@ -1,27 +1,44 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/description.dart';
 import 'package:flutter_application_1/login.dart';
 import 'package:logger/logger.dart';
-// ignore: unused_import
-import 'csv_service.dart';
+import 'package:flutter_application_1/favorite_provider.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 var logger = Logger();
 
-class Homepage extends StatefulWidget {
-  const Homepage({super.key});
+class Homepage extends ConsumerStatefulWidget {
+  final Set<String> favoriteClinics;
+  final Function(String) toggleFavorite;
+  final List<Map<String, String>> filteredClinics;
+  final Function(List<Map<String, String>>) updateFilteredClinics;
+  const Homepage({
+    super.key,
+    required this.favoriteClinics,
+    required this.toggleFavorite,
+    required this.filteredClinics,
+    required this.updateFilteredClinics,
+  });
 
   @override
-  State<Homepage> createState() => _HomepageState();
+  ConsumerState<Homepage> createState() => _HomepageState();
 }
 
-class _HomepageState extends State<Homepage> {
-  //late Future<List<Map<String, String>>> futureClinics;
+class _HomepageState extends ConsumerState<Homepage> {
   TextEditingController searchController = TextEditingController();
   String selectedTreatment = "";
+  String selectedCountry = "";
+  String selectedCity = "";
   List<String> categories = [];
   List<Map<String, String>> clinics = [];
   List<Map<String, String>> filteredClinics = [];
+  List<String> previousSearches = [];
+  List<Map<String, String>> clinicSuggestions = [];
+  List<Map<String, String>> availableClinicsList = [];
+  List<Map<String, dynamic>> favoriteClinics = [];
+  bool isFiltered = false;
 
   signout() async {
     await FirebaseAuth.instance.signOut();
@@ -35,37 +52,122 @@ class _HomepageState extends State<Homepage> {
   @override
   void initState() {
     super.initState();
-    fetchCategoriesAndClinics(selectedTreatment);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.filteredClinics.isEmpty) {
+        widget.updateFilteredClinics([]);
+      }
+    });
   }
+
 
   Future<List<Map<String, String>>> fetchCategoriesAndClinics(
     String category,
+    String country,
+    String city,
   ) async {
+    category = category.trim();
+    country = country.trim();
+    city = city.trim();
     var clinicsData =
         await FirebaseFirestore.instance
             .collection('clinics')
-            .where('treatment', isEqualTo: category)
+            .where('Category', isEqualTo: category)
+            .where('Country', isEqualTo: country)
+            .where('City', isEqualTo: city)
             .get();
-
-    List<Map<String, String>> clinicsList = [];
 
     for (var doc in clinicsData.docs) {
       Map<String, String> clinicInfo = {
         "name": doc['Clinics'],
         "address": doc['Address'],
         "phone": doc['Phone_number'],
+        "rating": doc['rating'],
+        "review": doc['Review'],
         "description": doc['Description'],
+        "site_url": doc['Site_url'],
+        "availability": doc['Availability'],
       };
-      clinicsList.add(clinicInfo);
+      clinics.add(clinicInfo);
     }
+    return clinics;
+  }
 
-    return clinicsList;
+  void filterClinics(String query) {
+    query = query.trim().toLowerCase();
+    logger.w("Filtering with query: $query");
+    logger.w("clinics before filtering: $clinics");
+
+    filteredClinics =
+        clinics
+            .where(
+              (clinic) =>
+                  (clinic["name"] ?? "").toLowerCase().contains(
+                    query.toLowerCase(),
+                  ) ||
+                  (clinic["address"] ?? "").toLowerCase().contains(
+                    query.toLowerCase(),
+                  ) ||
+                  (clinic["category"] ?? "").toLowerCase().contains(
+                    query.toLowerCase(),
+                  ),
+            )
+            .toList();
+
+    logger.w("Filtered Clinics: $filteredClinics");
+
+    setState(() {
+      clinicSuggestions = filteredClinics;
+    });
+  }
+
+  void onSearchChanged() {
+    if (searchController.text.isNotEmpty) {
+      filterClinics(searchController.text);
+    } else {
+      setState(() {
+        clinicSuggestions = [];
+      });
+    }
+  }
+
+
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  void updateClinics(String category, String country, String city) async {
+    if (isFiltered) {
+      setState(() {
+        filteredClinics.clear();
+      });
+    }
+    List<Map<String, String>> fetchedClinics = await fetchCategoriesAndClinics(
+      category,
+      country,
+      city,
+    );
+    if (fetchedClinics.isNotEmpty) {
+      setState(() {
+        filteredClinics = fetchedClinics;
+        isFiltered = true;
+      });
+    } else {
+      setState(() {
+        filteredClinics.clear();
+        isFiltered = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
+     final favoriteClinics = ref.watch(favoriteProvider.notifier);
+    final favorites = ref.watch(favoriteProvider);
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
@@ -91,6 +193,7 @@ class _HomepageState extends State<Homepage> {
                         height: 50,
                         child: TextField(
                           controller: searchController,
+                          onChanged: (value) => onSearchChanged(),
                           decoration: InputDecoration(
                             hintText: "Search",
                             hintStyle: TextStyle(color: Colors.white),
@@ -126,48 +229,49 @@ class _HomepageState extends State<Homepage> {
                         color: Colors.white,
                       ),
                       onPressed: () async {
-                        String? result = await showFilterPopup(context);
+                        final result = await showFilterPopup(context);
                         if (result != null) {
                           setState(() {
-                            selectedTreatment = result;
+                            selectedTreatment = result["category"];
+                            selectedCountry = result["country"];
+                            selectedCity = result["city"];
                           });
-                          await fetchCategoriesAndClinics(result);
+                          updateClinics(
+                            selectedTreatment,
+                            selectedCountry,
+                            selectedCity,
+                          );
+                          logger.w(
+                            "Selected: $selectedTreatment, $selectedCountry, $selectedCity",
+                          );
                         }
                       },
                     ),
                   ],
                 ),
                 SizedBox(height: 10),
-                Container(
-                  color: categories.isEmpty ? Colors.blue : Colors.transparent,
-                  child: Column(
-                    children: [
-                      if (categories.isNotEmpty)
-                        SizedBox(
-                          height: 70,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: categories.length,
-                            itemBuilder: (context, index) {
-                              final category = categories[index];
-                              return GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    selectedTreatment = category;
-                                  });
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8.0,
-                                  ),
-                                ),
-                              );
+                if (clinicSuggestions.isNotEmpty)
+                  Expanded(
+                    child: Container(
+                      color: Colors.white,
+                      child: ListView.builder(
+                        itemCount: clinicSuggestions.length,
+                        itemBuilder: (context, index) {
+                          return ListTile(
+                            title: Text(clinicSuggestions[index]["name"] ?? ""),
+                            subtitle: Text(
+                              clinicSuggestions[index]["category"] ?? "",
+                            ),
+                            onTap: () {
+                              searchController.text =
+                                  clinicSuggestions[index]["name"] ?? "";
+                              filterClinics(searchController.text);
                             },
-                          ),
-                        ),
-                    ],
+                          );
+                        },
+                      ),
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -175,7 +279,7 @@ class _HomepageState extends State<Homepage> {
           Expanded(
             child: Container(
               color: Theme.of(context).colorScheme.surface,
-              padding: EdgeInsets.all(10),
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               child:
                   filteredClinics.isNotEmpty
                       ? Column(
@@ -196,82 +300,158 @@ class _HomepageState extends State<Homepage> {
                               itemCount: filteredClinics.length,
                               itemBuilder: (context, index) {
                                 var clinic = filteredClinics[index];
-                                return Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 5),
-                                  child: Container(
-                                    padding: EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          isDarkMode
-                                              ? Colors.grey[900]
-                                              : Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color:
-                                            isDarkMode
-                                                ? Colors.white
-                                                : Colors.black,
+                                final isFavorite = favorites.any((c) => c["name"] == clinic["name"]);
+
+                                return GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) =>
+                                                ClinicDetail(clinic: clinic),
                                       ),
-                                      boxShadow: [
-                                        BoxShadow(
+                                    );
+                                  },
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 5),
+                                    child: Container(
+                                      padding: EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            Theme.of(context).brightness ==
+                                                    Brightness.dark
+                                                ? Colors.black
+                                                : Colors.white,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
                                           color:
                                               isDarkMode
-                                                  ? Colors.black54
-                                                  : Colors.black,
-                                          blurRadius: 5,
-                                          offset: Offset(0, 2),
+                                                  ? Colors.white
+                                                  : Colors.grey,
                                         ),
-                                      ],
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          clinic["name"]!,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
+                                        boxShadow: [
+                                          BoxShadow(
                                             color:
                                                 isDarkMode
-                                                    ? Colors.white
+                                                    ? Colors.grey
                                                     : Colors.blueAccent,
+                                            blurRadius: 5,
+                                            offset: Offset(0, 2),
                                           ),
-                                        ),
-                                        SizedBox(height: 5),
-                                        Text(
-                                          "Address: ${clinic["address"]!}",
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color:
-                                                isDarkMode
-                                                    ? Colors.white
-                                                    : Colors.black,
+                                        ],
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  clinic["name"]!,
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                    color:
+                                                        isDarkMode
+                                                            ? Colors.white
+                                                            : Colors.black,
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  maxLines: 2,
+                                                ),
+                                              ),
+                                               IconButton(
+                      icon: Icon(
+                        isFavorite
+                            ? Icons.favorite
+                            : Icons.favorite_border, 
+                        color: isFavorite ? Colors.red : Colors.grey,
+                      ),
+                      onPressed: () {
+                        favoriteClinics.toggleFavorite(clinic);
+                        logger.w("Favorite Clinics Updated: $favoriteClinics");
+                      },
+                    ),
+                                            ],
                                           ),
-                                        ),
-                                        SizedBox(height: 5),
-                                        Text(
-                                          "Phone: ${clinic["phone"]!}",
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color:
-                                                isDarkMode
-                                                    ? Colors.white
-                                                    : Colors.black,
+                                          SizedBox(height: 5),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.location_on,
+                                                size: 14,
+                                                color: Colors.grey,
+                                              ),
+                                              SizedBox(width: 5),
+                                              Expanded(
+                                                child: Text(
+                                                  clinic['address']!,
+                                                  style: TextStyle(
+                                                    color: Colors.grey,
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  maxLines: 2,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ),
-                                        SizedBox(height: 5),
-                                        Text(
-                                          clinic["description"]!,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color:
-                                                isDarkMode
-                                                    ? Colors.white
-                                                    : Colors.black,
+                                          SizedBox(height: 5),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.phone,
+                                                size: 14,
+                                                color:
+                                                    isDarkMode
+                                                        ? Colors.white
+                                                        : Colors.black,
+                                              ),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                clinic["phone"]?.isNotEmpty ==
+                                                        true
+                                                    ? clinic["phone"]!
+                                                    : "No phone number",
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color:
+                                                      isDarkMode
+                                                          ? Colors.white
+                                                          : Colors.black,
+                                                  fontStyle:
+                                                      clinic["phone"]
+                                                                  ?.isNotEmpty ==
+                                                              true
+                                                          ? FontStyle.normal
+                                                          : FontStyle.italic,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ),
-                                      ],
+                                          SizedBox(height: 5),
+                                          Text(
+                                            clinic["description"]!,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color:
+                                                  isDarkMode
+                                                      ? Colors.white
+                                                      : Colors.black,
+                                            ),
+                                          ),
+                                          SizedBox(height: 8),
+                                            buildClinicRating(
+                                                clinic['rating']!,
+                                                "${(int.tryParse(clinic['review']?.toString() ?? '0')?.abs() ?? 0)}",
+                                              ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 );
@@ -294,66 +474,116 @@ class _HomepageState extends State<Homepage> {
   }
 }
 
-Future<String?> showFilterPopup(BuildContext context) async {
-  String? selectedTreatment;
-  String? selectedCountry;
-  List<String> availableCountries = ["Europe", "Asia", "Eurasia"];
-  Map<String, List<String>> countryCities = {
-    "Europe": [
-      "Germany",
-      "France",
-      "Great Britain",
-      "Spain",
-      "Italy",
-      "Switzerland",
-      "Austria",
-      "Netherlands",
-      "Sweden",
-      "Turkey",
-    ],
-    "Asia": [
-      "South Korea",
-      "Japan",
-      "China",
-      "India",
-      "Thailand",
-      "Singapore",
-      "Malaysia",
-      "UAE",
-      "Taiwan",
-      "Vietnam",
-    ],
-    "Eurasia": ["Kazakhstan", "Russia", "Uzbekistan", "Azerbaijan", "Georgia"],
-  };
+Widget buildClinicRating(String rating, String reviewCount) {
+  double ratingValue = double.tryParse(rating) ?? 0.0;
+  int fullStars = ratingValue.floor();
+  bool hasHalfStar = ratingValue - fullStars >= 0.5;
 
-  Map<String, List<String>> citiesByCountry = {
-    "Germany": ["Berlin", "Munich", "Hamburg", "Frankfurt"],
-    "France": ["Paris", "Lyon", "Marseille"],
-    "Great Britain": ["London", "Manchester", "Edinburgh"],
-    "Spain": ["Madrid", "Barselona"],
-    "Italy": ["Rome", "Milan"],
-    "Switzerland": ["Zurich", "Geneva"],
-    "Austria": ["Vena"],
-    "Netherlands": ["Amsterdam"],
-    "Sweden": ["Stockholm"],
-    "Turkey": ["Istanbul", "Ankara"],
-    "South Korea": ["Seoul", "Pusan"],
-    "Japan": ["Tokyo", "Osaka", "Kyoto"],
-    "China": ["Beijing", "Shanghai", "Guangzhou"],
-    "India": ["Delhi", "Mumbai", "Bangalore"],
-    "Thailand": ["Bangkok", "Phuket"],
-    "Singapore": ["Singapore"],
-    "Malaysia": ["Kuala Lumpur"],
-    "UAE": ["Dubai", "Abu Dhabi"],
-    "Taiwan": ["Taipei"],
-    "Vietnam": ["Hanoi", "Ho Chi Minh City"],
-    "Kazakhstan": ["Almaty", "Astana", "Shymkent"],
-    "Russia": ["Moscow", "Saint Petersburg", "Novosibirsk"],
-    "Uzbekistan": ["Tashkent"],
-    "Azerbaijan": ["Baku"],
-    "Georgia": ["Tbilisi"],
-  };
-  return showDialog(
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.center,
+    children: [
+      Text(
+        rating,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: Colors.black87,
+        ),
+      ),
+
+      SizedBox(width: 4),
+      ...List.generate(
+        fullStars,
+        (index) => Icon(Icons.star, color: Colors.amber, size: 16),
+      ),
+      if (hasHalfStar) Icon(Icons.star_half, color: Colors.amber, size: 16),
+
+      SizedBox(width: 4),
+      Text(
+        "($reviewCount)",
+        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+      ),
+    ],
+  );
+}
+
+Future<Map<String, dynamic>?> showFilterPopup(
+  BuildContext context, {
+  String? selectedTreatment,
+  String? selectedContinent,
+  String? selectedCountry,
+  String? selectedCity,
+}) async {
+  final ScrollController scrollController = ScrollController();
+  Map<String, Map<String, List<String>>> listData = {};
+
+  void scrollToSection(double offset) {
+  Future.delayed(Duration(milliseconds: 300), () {
+    if (scrollController.hasClients) {
+      scrollController.animateTo(
+        offset,
+        duration: Duration(milliseconds: 450),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      logger.w("ScrollController is not attached to any scroll view.");
+    }
+  });
+}
+
+
+  void scrollToCountries(String treatment) {
+    if (listData.containsKey(treatment)) {
+      List<String> countries = listData[treatment]!.keys.toList();
+
+      if (countries.length > 1) {
+        scrollToSection(150);
+      }
+    }
+  }
+
+  void scrollToCities() {
+    scrollToSection(200);
+  }
+
+  Future<Map<String, List<String>>> fetchCountriesAndCities(
+    String treatment,
+  ) async {
+    treatment = treatment.trim();
+
+    var treatmentSnapshot =
+        await FirebaseFirestore.instance
+            .collection('clinics')
+            .where('Category', isEqualTo: treatment)
+            .get();
+
+    if (treatmentSnapshot.docs.isEmpty) {
+      logger.w("No data found for treatment: $treatment");
+      return {};
+    }
+
+    Map<String, List<String>> countryCityMap = {};
+
+    for (var doc in treatmentSnapshot.docs) {
+      String country = doc['Country'];
+      String city = doc['City'];
+
+      if (country.isNotEmpty && city.isNotEmpty) {
+        countryCityMap.putIfAbsent(country, () => []);
+        if (!countryCityMap[country]!.contains(city)) {
+          countryCityMap[country]!.add(city);
+        }
+      }
+    }
+
+    listData[treatment] = countryCityMap;
+
+    logger.w("Fetched treatment data: $listData");
+
+    return countryCityMap;
+  }
+
+  return showDialog<Map<String, dynamic>>(
     context: context,
     builder: (context) {
       return StatefulBuilder(
@@ -367,6 +597,7 @@ Future<String?> showFilterPopup(BuildContext context) async {
               width: MediaQuery.of(context).size.width,
               padding: EdgeInsets.all(10),
               child: SingleChildScrollView(
+                controller: scrollController,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -382,7 +613,9 @@ Future<String?> showFilterPopup(BuildContext context) async {
                         ),
                         IconButton(
                           icon: Icon(Icons.close, color: Colors.grey),
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
                         ),
                       ],
                     ),
@@ -399,18 +632,25 @@ Future<String?> showFilterPopup(BuildContext context) async {
                       runSpacing: 10,
                       children:
                           [
-                            "Plastic Surgery",
-                            "Orthopedic",
-                            "Oncological",
+                            "Plastic surgery clinic",
+                            "Orthopedic clinic",
+                            "Oncological clinics",
                             "Neurosurgery",
                           ].map((treatment) {
                             bool isSelected = selectedTreatment == treatment;
                             return GestureDetector(
-                              onTap: () {
+                              onTap: () async {
                                 setState(() {
                                   selectedTreatment = treatment;
+                                  selectedCountry = null;
+                                  selectedCity = null;
                                 });
-                                Navigator.pop(context, treatment);
+                                var fetchedData = await fetchCountriesAndCities(
+                                  treatment,
+                                );
+                                setState(() {
+                                  listData[treatment] = fetchedData;
+                                });
                               },
                               child: Container(
                                 padding: EdgeInsets.symmetric(
@@ -453,19 +693,29 @@ Future<String?> showFilterPopup(BuildContext context) async {
                       runSpacing: 10,
                       children:
                           [
-                            "ENT",
-                            "Gastroenterology",
-                            "Urology",
-                            "Ophthalmology",
-                            "Dermatology",
-                            "Physical Therapy & Rehabilitation",
+                            "Ent clinics",
+                            "Gastroenterology clinics",
+                            "Urology  clinics",
+                            "Ophthalmology  clinics",
+                            "Dermatology clinics",
+                            "Physical Therapy & Rehabilitation Clinic",
                           ].map((treatment) {
                             bool isSelected = selectedTreatment == treatment;
                             return GestureDetector(
-                              onTap:
-                                  () => setState(
-                                    () => selectedTreatment = treatment,
-                                  ),
+                              onTap: () async {
+                                setState(() {
+                                  selectedTreatment = treatment;
+                                  selectedCountry = null;
+                                  selectedCity = null;
+                                });
+                                var fetchedData = await fetchCountriesAndCities(
+                                  treatment,
+                                );
+
+                                setState(() {
+                                  listData[treatment] = fetchedData;
+                                });
+                              },
                               child: Container(
                                 padding: EdgeInsets.symmetric(
                                   horizontal: 15,
@@ -494,56 +744,14 @@ Future<String?> showFilterPopup(BuildContext context) async {
                             );
                           }).toList(),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 20, bottom: 5),
-                      child: Text(
-                        "Country",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children:
-                          availableCountries.map((continent) {
-                            return GestureDetector(
-                              onTap:
-                                  () => setState(
-                                    () => selectedCountry = continent,
-                                  ),
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 15,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.grey),
-                                  borderRadius: BorderRadius.circular(10),
-                                  color:
-                                      selectedCountry == continent
-                                          ? Colors.blueAccent
-                                          : Colors.white,
-                                ),
-                                child: Text(
-                                  continent,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                    color:
-                                        selectedCountry == continent
-                                            ? Colors.white
-                                            : Colors.black,
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                    ),
-                    if (selectedCountry != null) ...[
+                    Divider(),
+                    if (selectedTreatment != null &&
+                        listData.containsKey(selectedTreatment) &&
+                        listData[selectedTreatment]!.isNotEmpty) ...[
                       Padding(
                         padding: const EdgeInsets.only(top: 20, bottom: 5),
                         child: Text(
-                          "City",
+                          "Country",
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -551,12 +759,15 @@ Future<String?> showFilterPopup(BuildContext context) async {
                         spacing: 10,
                         runSpacing: 10,
                         children:
-                            countryCities[selectedCountry]!.map((country) {
+                            listData[selectedTreatment]!.keys.map((country) {
                               return GestureDetector(
-                                onTap:
-                                    () => setState(
-                                      () => selectedCountry = country,
-                                    ),
+                                onTap: () {
+                                  setState(() {
+                                    selectedCountry = country;
+                                    selectedCity = null;
+                                  });
+                                  scrollToCountries(selectedTreatment!);
+                                },
                                 child: Container(
                                   padding: EdgeInsets.symmetric(
                                     horizontal: 15,
@@ -587,7 +798,9 @@ Future<String?> showFilterPopup(BuildContext context) async {
                       ),
                     ],
                     if (selectedCountry != null &&
-                        citiesByCountry.containsKey(selectedCountry)) ...[
+                        listData[selectedTreatment]!.containsKey(
+                          selectedCountry,
+                        )) ...[
                       Padding(
                         padding: const EdgeInsets.only(top: 20, bottom: 5),
                         child: Text(
@@ -595,38 +808,88 @@ Future<String?> showFilterPopup(BuildContext context) async {
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
-                      SizedBox(
-                        height: 200,
-                        child: SingleChildScrollView(
-                          child: Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            children:
-                                citiesByCountry[selectedCountry]!.map((city) {
-                                  return GestureDetector(
-                                    onTap: () => Navigator.pop(context),
-                                    child: Container(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 15,
-                                        vertical: 10,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        border: Border.all(color: Colors.grey),
-                                        borderRadius: BorderRadius.circular(10),
-                                        color: Colors.white,
-                                      ),
-                                      child: Text(
-                                        city,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            height: 200,
+                            child: SingleChildScrollView(
+                              child: Wrap(
+                                spacing: 10,
+                                runSpacing: 10,
+                                children:
+                                    listData[selectedTreatment]![selectedCountry]!
+                                        .map((city) {
+                                          return GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                selectedCity = city;
+                                              });
+                                              scrollToCities();
+                                              if (selectedTreatment != null &&
+                                                  selectedCountry != null &&
+                                                  selectedCity != null) {
+                                                if (Navigator.canPop(context)) {
+                                                  Navigator.pop(context, {
+                                                    "category":
+                                                        selectedTreatment,
+                                                    "country": selectedCountry,
+                                                    "city": selectedCity,
+                                                  });
+                                                }
+                                              } else {
+                                                logger.w(
+                                                  "Please select a treatment, country, and city first.",
+                                                );
+                                              }
+                                            },
+                                            child: Container(
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: 15,
+                                                vertical: 10,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                border: Border.all(
+                                                  color:
+                                                      Theme.of(
+                                                                context,
+                                                              ).brightness ==
+                                                              Brightness.dark
+                                                          ? Colors.white70
+                                                          : Colors.grey,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                color:
+                                                    Theme.of(
+                                                              context,
+                                                            ).brightness ==
+                                                            Brightness.dark
+                                                        ? Colors.black54
+                                                        : Colors.white,
+                                              ),
+                                              child: Text(
+                                                city,
+                                                style: TextStyle(
+                                                  color:
+                                                      Theme.of(
+                                                                context,
+                                                              ).brightness ==
+                                                              Brightness.dark
+                                                          ? Colors.white
+                                                          : Colors.black,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        })
+                                        .toList(),
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ],

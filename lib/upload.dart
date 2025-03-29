@@ -8,34 +8,20 @@ import 'package:logger/logger.dart';
 var logger = Logger();
 
 Future<void> uploadCSVtoFirestore() async {
-  // Load CSV from assets
-  final rawData = await rootBundle.loadString("parsing/parse_kz.csv");
-
-  // Parse CSV
+  final rawData = await rootBundle.loadString("parsing/kaz.csv");
   List<List<dynamic>> rows = const CsvToListConverter().convert(rawData);
-
-  // Get Firestore instance
   FirebaseFirestore firestore = FirebaseFirestore.instance;
-
-  // Assuming first row is headers
   List<String> headers = rows[0].map((e) => e.toString()).toList();
-
-  // Upload rows to Firestore
   for (int i = 1; i < rows.length; i++) {
     Map<String, dynamic> clinic = {};
     for (int j = 0; j < headers.length; j++) {
-      // Replace invalid characters in field names
       String key = headers[j].replaceAll(RegExp(r'[./\[\]#?]'), '_').trim();
-      clinic[key] = rows[i][j]?.toString().trim() ?? ''; // Ensure value is a string
+      clinic[key] = rows[i][j]?.toString().trim() ?? ''; 
     }
-
-    // Generate a safe document ID
     String documentId = (clinic["name"] ?? clinic["address"] ?? "clinic_$i")
-        .replaceAll(RegExp(r'[ ./\[\]#?]'), '_') // Remove invalid characters
+        .replaceAll(RegExp(r'[ ./\[\]#?]'), '_') 
         .toLowerCase()
         .trim();
-
-    // Ensure the document ID is not empty
     if (documentId.isEmpty) {
       documentId = "clinic_$i";
     }
