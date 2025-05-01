@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_application_1/favorite_provider.dart';
 import 'package:flutter_application_1/description.dart';
+import 'package:flutter_application_1/localization/app_localization.dart';
 
 class FavoritesPage extends ConsumerWidget {
     const FavoritesPage({
@@ -16,18 +17,25 @@ class FavoritesPage extends ConsumerWidget {
     final favoriteNotifier = ref.watch(favoriteProvider.notifier);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final textColor = theme.textTheme.bodyMedium?.color;
+    final isDarkMode = theme.brightness == Brightness.dark;
+    final appLocalizations = AppLocalizations.of(context);
+    
+    if (appLocalizations == null) {
+      return Scaffold(body: Center(child: Text('Localizations not available')));
+    }
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
         title: Text(
-          "Favorite Clinics",
+          appLocalizations.translate('favorites'),
           style: theme.appBarTheme.titleTextStyle,
         ),
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
       ),
       body: Container(
-        color: colorScheme.surface,
+        color: Theme.of(context).colorScheme.surface,
         child: favoriteClinics.isNotEmpty
             ? ListView.builder(
                 itemCount: favoriteClinics.length,
@@ -52,12 +60,17 @@ class FavoritesPage extends ConsumerWidget {
                       child: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color:  Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: colorScheme.onSurface),
+                          border: Border.all(
+                                          color:
+                                              isDarkMode
+                                                  ? Colors.white
+                                                  : Colors.grey,
+                                        ),
                           boxShadow: [
                             BoxShadow(
-                              color: colorScheme.onSurface.withOpacity(0.2),
+                              color: colorScheme.onSurface,
                               blurRadius: 5,
                               offset: Offset(0, 2),
                             ),
@@ -75,7 +88,7 @@ class FavoritesPage extends ConsumerWidget {
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
-                                      color: colorScheme.onSurface,
+                                      color: Theme.of(context).textTheme.bodyMedium?.color,
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                     maxLines: 2,
@@ -97,16 +110,16 @@ class FavoritesPage extends ConsumerWidget {
                             const SizedBox(height: 5),
                             Row(
                               children: [
-                                const Icon(
+                              Icon(
                                   Icons.location_on,
                                   size: 14,
-                                  color: Colors.grey,
+                                  color: Theme.of(context).iconTheme.color,
                                 ),
                                 const SizedBox(width: 5),
                                 Expanded(
                                   child: Text(
                                     clinic['address'] ?? "No address",
-                                    style: const TextStyle(color: Colors.grey),
+                                    style: TextStyle(color: textColor),
                                     overflow: TextOverflow.ellipsis,
                                     maxLines: 2,
                                     softWrap: true,
@@ -117,10 +130,10 @@ class FavoritesPage extends ConsumerWidget {
                             const SizedBox(height: 5),
                             Row(
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.phone,
                                   size: 14,
-                                  color: Colors.black,
+                                  color: Theme.of(context).iconTheme.color
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
@@ -129,7 +142,7 @@ class FavoritesPage extends ConsumerWidget {
                                       : "No phone number",
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: colorScheme.onSurface,
+                                    color: textColor,
                                     fontStyle:
                                         clinic["phone"]?.isNotEmpty == true
                                             ? FontStyle.normal
@@ -141,7 +154,7 @@ class FavoritesPage extends ConsumerWidget {
                             const SizedBox(height: 8),
                             buildClinicRating(
                               clinic['rating'] ?? "0.0",
-                              "${(int.tryParse(clinic['review']?.toString() ?? '0')?.abs() ?? 0)}",
+                              "${(int.tryParse(clinic['review']?.toString() ?? '0')?.abs() ?? 0)}",context
                             ),
                           ],
                         ),
@@ -150,17 +163,17 @@ class FavoritesPage extends ConsumerWidget {
                   );
                 },
               )
-            : const Center(
+            :  Center(
                 child: Text(
                   "No favorite clinics yet.",
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                  style: TextStyle(fontSize: 16, color: textColor),
                 ),
               ),
       ),
     );
   }
 
-  Widget buildClinicRating(String rating, String reviewCount) {
+  Widget buildClinicRating(String rating, String reviewCount, BuildContext context) {
     double ratingValue = double.tryParse(rating) ?? 0.0;
     int fullStars = ratingValue.floor();
     bool hasHalfStar = ratingValue - fullStars >= 0.5;
@@ -173,7 +186,7 @@ class FavoritesPage extends ConsumerWidget {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: Theme.of(context).textTheme.bodyMedium?.color
           ),
         ),
         SizedBox(width: 4),
