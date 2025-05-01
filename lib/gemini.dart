@@ -26,82 +26,145 @@ class GeminiAI {
     }
   }
 
+  String getTranslatedKey(String baseKey, String langCode) {
+    switch (langCode.toLowerCase()) {
+      case 'ru':
+        return '${baseKey}_RU';
+      case 'kk':
+      case 'kz':
+        return '${baseKey}_KZ';
+      default:
+        return baseKey;
+    }
+  }
+
   Future<List<Map<String, dynamic>>> fetchSimilarClinics(
     String category,
     String country,
+    String selectedLanguageCode,
   ) async {
     FirebaseFirestore firestore = FirebaseFirestore.instance;
+    String categoryField;
+    String nameField;
+    String countryField;
+    String cityFiled;
+    switch (selectedLanguageCode) {
+      case 'ru':
+        categoryField = 'Category_RU';
+        nameField = 'Clinics_RU';
+        countryField = 'Country_RU';
+        cityFiled = 'City_RU';
+        break;
+      case 'kk':
+        categoryField = 'Category_KZ';
+        nameField = 'Clinics_KZ';
+        countryField = 'Country_KZ';
+        cityFiled = 'City_KZ';
+        break;
+      default:
+        categoryField = 'Category';
+        nameField = 'Clinics';
+        countryField = 'Country';
+        cityFiled = 'City';
+    }
 
     QuerySnapshot clinicSnapshot =
         await firestore
-            .collection('clinics')
-            .where('Category', isEqualTo: category)
-            .where('Country', isEqualTo: country)
+            .collection('translation_clinics')
+            .where(categoryField, isEqualTo: category)
+            .where(countryField, isEqualTo: country)
             .get();
 
     List<Map<String, dynamic>> fetchedClinics =
         clinicSnapshot.docs.map((doc) {
           Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
           return {
-            'name': data['Clinics'] ?? '',
+            'name': data[nameField] ?? '',
             'rating': data['rating'] ?? 0,
             'reviews': data['Review'] ?? [],
             'availability': data['Availability'] ?? '',
-            'country': data['Country'] ?? '',
-            'city': data['City'] ?? '',
+            'country': data[countryField] ?? '',
+            'city': data[cityFiled] ?? '',
           };
         }).toList();
 
     return fetchedClinics;
   }
 
-  Future<Map<String, dynamic>?> getClinicByName(String clinicName) async {
-    FirebaseFirestore firestore = FirebaseFirestore.instance;
-
-    logger.w("🔍 Searching for clinic: '${clinicName.trim().toLowerCase()}'");
-
-    QuerySnapshot snapshot =
-        await firestore
-            .collection("clinics")
-            .where("Clinics", isEqualTo: clinicName.trim())
-            .limit(1)
-            .get();
-
-    if (snapshot.docs.isNotEmpty) {
-      Map<String, dynamic> clinicData =
-          snapshot.docs.first.data() as Map<String, dynamic>;
-
-      return {
-        'name': clinicData['Clinics'] ?? 'Unknown',
-        'rating': clinicData['rating'] ?? 0,
-        'reviews': (int.tryParse(clinicData['Review'].toString()) ?? 0).abs(),
-        'availability': clinicData['Availability'] ?? '',
-        'country': clinicData['Country'] ?? '',
-        'city': clinicData['City'] ?? '',
-      };
-    }
-
-    logger.w("Clinic '$clinicName' not found in Firestore.");
-    return null;
+Future<Map<String, dynamic>?> getClinicByName(
+  String clinicName,
+  String selectedLanguageCode,
+) async {
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+  String nameField;
+  String countryField;
+  String cityField;
+  switch (selectedLanguageCode) {
+    case 'ru':
+      nameField = 'Clinics_RU';
+      countryField = 'Country_RU';
+      cityField = 'City_RU';
+      break;
+    case 'kk':
+      nameField = 'Clinics_KZ';
+      countryField = 'Country_KZ';
+      cityField = 'City_KZ';
+      break;
+    default:
+      nameField = 'Clinics';
+      countryField = 'Country';
+      cityField = 'City';
   }
+
+  logger.w("🔍 Searching for clinic: '${clinicName.trim()}' using field '$nameField'");
+
+  QuerySnapshot snapshot = await firestore
+      .collection("translation_clinics")
+      .where(nameField, isEqualTo: clinicName.trim())
+      .limit(1)
+      .get();
+
+  if (snapshot.docs.isNotEmpty) {
+    Map<String, dynamic> clinicData = snapshot.docs.first.data() as Map<String, dynamic>;
+
+    return {
+      'name': clinicData[nameField] ?? 'Unknown',
+      'rating': clinicData['rating'] ?? 0,
+      'reviews': (int.tryParse(clinicData['Review'].toString()) ?? 0).abs(),
+      'availability': clinicData['Availability'] ?? '',
+      'country': clinicData[countryField] ?? '',
+      'city': clinicData[cityField] ?? '',
+    };
+  }
+
+  logger.w("Clinic '$clinicName' not found in Firestore.");
+  return null;
+}
+
 
   Future<String> analyzeClinic(
     String clinicName,
     String category,
     String country,
+    String selectedLanguageCode,
   ) async {
     loadingMessage.value = ".....";
+
     List<Map<String, dynamic>> similarClinics = await fetchSimilarClinics(
       category,
       country,
+      selectedLanguageCode,
     );
+
     logger.w(similarClinics);
+
     if (similarClinics.isEmpty) {
       return "No similar clinics found for category '$category'.";
     }
 
-    Map<String, dynamic>? targetClinic = await getClinicByName(clinicName);
+    Map<String, dynamic>? targetClinic = await getClinicByName(clinicName, selectedLanguageCode);
     logger.w(targetClinic);
+
     if (targetClinic == null || targetClinic['name'] == null) {
       return "Clinic '$clinicName' not found in the database.";
     }
@@ -110,40 +173,111 @@ class GeminiAI {
       (a, b) => (b['rating'] ?? 0).compareTo(a['rating'] ?? 0),
     );
 
-    String prompt = """
-  Analyze the clinic '${targetClinic['name']}' in the category '$category'.  
-  Compare it with other similar clinics based on:  
+    String prompt;
+    switch (selectedLanguageCode) {
+      case 'ru':
+        prompt = """
+Проанализируй клинику '${targetClinic['name']}' в категории '$category'.  
+Сравни её с другими похожими клиниками на основе:  
 
-  - ⭐ **Average Rating:** ${targetClinic['rating']}  
-  - 💬 **Reviews:** ${targetClinic['reviews']}  
-  - 🌍 **Country:** ${targetClinic['country']}  
-  - 🕒 **Availability:** ${targetClinic['availability']}  
+- ⭐ Средняя оценка: ${targetClinic['rating']}  
+- 💬 Отзывы: ${targetClinic['reviews']}  
+- 🌍 Страна: ${targetClinic['country']}  
+- 🕒 Доступность: ${targetClinic['availability']}  
 
-  Other similar clinics in this category:  
-  ${similarClinics.map((c) => "- ${c['name']}: ${c['rating']}⭐, ${c['country']}").join("\n")}  
+Похожие клиники в этой категории:  
+${similarClinics.map((c) => "- ${c['name']}: ${c['rating']}⭐, ${c['country']}").join("\n")}  
 
-  Based on this data, provide a **concise AI-driven analysis** explaining why this clinic is **better or worse** than others.
-  """;
+На основе этих данных сделай краткий AI-анализ, объясни, чем эта клиника лучше или хуже остальных.
+""";
+        break;
+      case 'kk':
+        prompt = """
+'${targetClinic['name']}' клиникасын '$category' санатында талдаңыз.  
+Оны басқа ұқсас клиникалармен салыстырыңыз:  
 
-    return await getGeminiResponse(prompt);
-  }
+- ⭐ Орташа рейтинг: ${targetClinic['rating']}  
+- 💬 Пікірлер саны: ${targetClinic['reviews']}  
+- 🌍 Ел: ${targetClinic['country']}  
+- 🕒 Қолжетімділік: ${targetClinic['availability']}  
 
-  Future<String> findArticles(String clinicName) async {
-    loadingMessage.value = ".....";
-    Map<String, dynamic>? clinic = await getClinicByName(clinicName);
+Бұл санаттағы басқа ұқсас клиникалар:  
+${similarClinics.map((c) => "- ${c['name']}: ${c['rating']}⭐, ${c['country']}").join("\n")}  
 
-    if (clinic == null || clinic['name'] == null) {
-      return "Clinic '$clinicName' not found in the database.";
+Осы деректер негізінде қысқа AI-талдау жасаңыз, бұл клиниканың басқалардан артықшылықтарын немесе кемшіліктерін түсіндіріңіз.
+""";
+        break;
+      default:
+        prompt = """
+Analyze the clinic '${targetClinic['name']}' in the category '$category'.  
+Compare it with other similar clinics based on:  
+
+- ⭐ Average Rating: ${targetClinic['rating']}  
+- 💬 Reviews: ${targetClinic['reviews']}  
+- 🌍 Country: ${targetClinic['country']}  
+- 🕒 Availability: ${targetClinic['availability']}  
+
+Other similar clinics in this category:  
+${similarClinics.map((c) => "- ${c['name']}: ${c['rating']}⭐, ${c['country']}").join("\n")}  
+
+Based on this data, provide a concise AI-driven analysis explaining why this clinic is better or worse than others.
+""";
     }
 
-    String city = clinic['city'] ?? 'Unknown City';
-    String country = clinic['country'] ?? 'Unknown Country';
-
-    String prompt = """
-  Find recent articles about the clinic '$clinicName' located in $city, $country.
-  Summarize the key points and provide relevant insights.
-  """;
-
     return await getGeminiResponse(prompt);
   }
+
+Future<String> findArticles(String clinicName, String selectedLanguageCode) async {
+  loadingMessage.value = ".....";
+
+  Map<String, dynamic>? clinic = await getClinicByName(clinicName, selectedLanguageCode);
+
+  if (clinic == null || clinic['name'] == null) {
+    return "Clinic '$clinicName' not found in the database.";
+  }
+
+  String city = clinic['city'] ?? 'Unknown City';
+  String country = clinic['country'] ?? 'Unknown Country';
+
+  String prompt = "";
+
+switch (selectedLanguageCode) {
+  case 'ru':
+    prompt = """
+Ты — ассистент, который помогает находить информацию.
+Сделай вид, что ты ищешь в интернете свежие статьи о клинике '$clinicName', расположенной в городе $city, $country.
+Представь 3-5 статей с короткими аннотациями и укажи для каждой ссылку (даже если она будет вымышленной).
+Формат:
+- Название статьи
+- Краткое содержание
+- Ссылка в формате [Текст ссылки](https://your-link.com)
+""";
+    break;
+  case 'kk':
+    prompt = """
+Сен ақпарат табатын көмекшісің.
+'$clinicName' клиникасы туралы $city, $country қаласында орналасқан соңғы мақалаларды тауып жатқандай бол.
+Әр мақала үшін қысқаша сипаттама және сілтеме көрсет (ойдан шығарылған болса да).
+Формат:
+- Мақала атауы
+- Қысқаша сипаттама
+- Сілтемені [Сілтеме мәтіні](https://your-link.com) форматында бер.
+""";
+    break;
+  default: 
+    prompt = """
+You are an assistant that helps find information.
+Pretend you are searching the internet for recent articles about the clinic '$clinicName' located in $city, $country.
+Provide 3-5 article summaries with titles and a link for each (the links can be fictional).
+Format:
+- Article Title
+- Short Summary
+- Link in the format [Link Text](https://your-link.com)
+""";
+}
+
+
+  return await getGeminiResponse(prompt);
+}
+
 }
