@@ -2,10 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/description.dart';
+import 'package:flutter_application_1/localization/app_localization.dart';
 import 'package:flutter_application_1/login.dart';
 import 'package:logger/logger.dart';
 import 'package:flutter_application_1/favorite_provider.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 var logger = Logger();
 
@@ -32,11 +34,11 @@ class _HomepageState extends ConsumerState<Homepage> {
   String selectedCountry = "";
   String selectedCity = "";
   List<String> categories = [];
-  List<Map<String, String>> clinics = [];
-  List<Map<String, String>> filteredClinics = [];
+  List<Map<String, dynamic>> localizedClinics = [];
+  List<Map<String, dynamic>> filteredClinics = [];
   List<String> previousSearches = [];
-  List<Map<String, String>> clinicSuggestions = [];
-  List<Map<String, String>> availableClinicsList = [];
+  List<Map<String, dynamic>> clinicSuggestions = [];
+  //List<Map<String, dynamic>> availableClinicsList = [];
   List<Map<String, dynamic>> favoriteClinics = [];
   bool isFiltered = false;
 
@@ -59,83 +61,67 @@ class _HomepageState extends ConsumerState<Homepage> {
     });
   }
 
+  String getTranslatedKey(String baseKey, String langCode) {
+    switch (langCode.toLowerCase()) {
+      case 'ru':
+        return '${baseKey}_RU';
+      case 'kk':
+      case 'kz':
+        return '${baseKey}_KZ';
+      default:
+        return baseKey;
+    }
+  }
 
-  Future<List<Map<String, String>>> fetchCategoriesAndClinics(
+  String getTranslatedCategoryField(String langCode) {
+    if (langCode == 'ru') return 'Category_RU';
+    if (langCode == 'kk') return 'Category_KZ';
+    return 'Category';
+  }
+
+  Future<List<Map<String, dynamic>>> fetchCategoriesAndClinics(
     String category,
     String country,
     String city,
+    BuildContext context,
   ) async {
-    category = category.trim();
-    country = country.trim();
-    city = city.trim();
-    var clinicsData =
+    final appLocalizations = AppLocalizations.of(context)!;
+    final localizedCategory = appLocalizations.translate(category);
+    final langCode = appLocalizations.locale.languageCode;
+    final translatedCategoryKey = getTranslatedCategoryField(langCode);
+    final translatedCountryKey = getTranslatedKey('Country', langCode);
+    final translatedCityKey = getTranslatedKey('City', langCode);
+    final translatedClinicsKey = getTranslatedKey('Clinics', langCode);
+    final translatedAddressKey = getTranslatedKey('Address', langCode);
+    final translatedDescriptionKey = getTranslatedKey('Description', langCode);
+
+    logger.w('Localized category name: $localizedCategory');
+    logger.w('Querying with translatedCategoryKey: $translatedCategoryKey');
+
+    final categorySnap =
         await FirebaseFirestore.instance
-            .collection('clinics')
-            .where('Category', isEqualTo: category)
-            .where('Country', isEqualTo: country)
-            .where('City', isEqualTo: city)
+            .collection('translation_clinics')
+            .where(translatedCategoryKey, isEqualTo: localizedCategory)
+            .where(translatedCountryKey, isEqualTo: country)
+            .where(translatedCityKey, isEqualTo: city)
             .get();
 
-    for (var doc in clinicsData.docs) {
-      Map<String, String> clinicInfo = {
-        "name": doc['Clinics'],
-        "address": doc['Address'],
+    List<Map<String, dynamic>> localizedClinics = [];
+
+    for (var doc in categorySnap.docs) {
+      localizedClinics.add({
+        "name": doc[translatedClinicsKey] ?? doc['Clinics'],
+        "address": doc[translatedAddressKey] ?? doc['Address'],
         "phone": doc['Phone_number'],
         "rating": doc['rating'],
         "review": doc['Review'],
-        "description": doc['Description'],
+        "description": doc[translatedDescriptionKey] ?? doc['Description'],
         "site_url": doc['Site_url'],
         "availability": doc['Availability'],
-      };
-      clinics.add(clinicInfo);
-    }
-    return clinics;
-  }
-
-  void filterClinics(String query) {
-    query = query.trim().toLowerCase();
-    logger.w("Filtering with query: $query");
-    logger.w("clinics before filtering: $clinics");
-
-    filteredClinics =
-        clinics
-            .where(
-              (clinic) =>
-                  (clinic["name"] ?? "").toLowerCase().contains(
-                    query.toLowerCase(),
-                  ) ||
-                  (clinic["address"] ?? "").toLowerCase().contains(
-                    query.toLowerCase(),
-                  ) ||
-                  (clinic["category"] ?? "").toLowerCase().contains(
-                    query.toLowerCase(),
-                  ),
-            )
-            .toList();
-
-    logger.w("Filtered Clinics: $filteredClinics");
-
-    setState(() {
-      clinicSuggestions = filteredClinics;
-    });
-  }
-
-  void onSearchChanged() {
-    if (searchController.text.isNotEmpty) {
-      filterClinics(searchController.text);
-    } else {
-      setState(() {
-        clinicSuggestions = [];
       });
     }
-  }
 
-
-
-  @override
-  void dispose() {
-    searchController.dispose();
-    super.dispose();
+    return localizedClinics;
   }
 
   void updateClinics(String category, String country, String city) async {
@@ -144,13 +130,15 @@ class _HomepageState extends ConsumerState<Homepage> {
         filteredClinics.clear();
       });
     }
-    List<Map<String, String>> fetchedClinics = await fetchCategoriesAndClinics(
+    List<Map<String, dynamic>> fetchedClinics = await fetchCategoriesAndClinics(
       category,
       country,
       city,
+      context,
     );
     if (fetchedClinics.isNotEmpty) {
       setState(() {
+        localizedClinics = fetchedClinics;
         filteredClinics = fetchedClinics;
         isFiltered = true;
       });
@@ -162,14 +150,49 @@ class _HomepageState extends ConsumerState<Homepage> {
     }
   }
 
+  
+  void filterClinics(String query) {
+    final q = query.trim().toLowerCase();
+
+    final results =
+        localizedClinics.where((clinic) {
+          final name = (clinic["name"] ?? "").toString().toLowerCase();
+          final address = (clinic["address"] ?? "").toString().toLowerCase();
+          return name.contains(q) || address.contains(q);
+        }).toList();
+
+    setState(() {
+      filteredClinics = results;
+      if (searchController.text.trim().toLowerCase() == q && q.isNotEmpty) {
+        clinicSuggestions = results;
+      }
+    });
+  }
+  void onSearchChanged() {
+    if (searchController.text.isNotEmpty) {
+      filterClinics(searchController.text);
+    } else {
+      setState(() {
+        clinicSuggestions = [];
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
-     final favoriteClinics = ref.watch(favoriteProvider.notifier);
+    final favoriteClinics = ref.watch(favoriteProvider.notifier);
     final favorites = ref.watch(favoriteProvider);
+    final colorScheme = theme.colorScheme;
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           "OtaMed",
@@ -249,27 +272,64 @@ class _HomepageState extends ConsumerState<Homepage> {
                     ),
                   ],
                 ),
-                SizedBox(height: 10),
+                SizedBox(height: 12),
                 if (clinicSuggestions.isNotEmpty)
-                  Expanded(
-                    child: Container(
+                  Container(
+                    margin: EdgeInsets.symmetric(horizontal: 8),
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
                       color: Colors.white,
-                      child: ListView.builder(
-                        itemCount: clinicSuggestions.length,
-                        itemBuilder: (context, index) {
-                          return ListTile(
-                            title: Text(clinicSuggestions[index]["name"] ?? ""),
-                            subtitle: Text(
-                              clinicSuggestions[index]["category"] ?? "",
+                      borderRadius: BorderRadius.circular(7),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 6,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    constraints: BoxConstraints(maxHeight: 130),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: clinicSuggestions.length,
+                      separatorBuilder:
+                          (context, index) =>
+                              Divider(color: Colors.grey.shade300, height: 8),
+                      itemBuilder: (context, index) {
+                        final clinic = clinicSuggestions[index];
+                        return InkWell(
+                          onTap: () {
+                            final selectedName = clinic["name"] ?? "";
+                            filterClinics(searchController.text);
+                            setState(() {
+                              filterClinics(selectedName);
+                              clinicSuggestions.clear();
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 6,
+                              horizontal: 4,
                             ),
-                            onTap: () {
-                              searchController.text =
-                                  clinicSuggestions[index]["name"] ?? "";
-                              filterClinics(searchController.text);
-                            },
-                          );
-                        },
-                      ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    clinic["name"] ?? "",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 14,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
               ],
@@ -300,7 +360,9 @@ class _HomepageState extends ConsumerState<Homepage> {
                               itemCount: filteredClinics.length,
                               itemBuilder: (context, index) {
                                 var clinic = filteredClinics[index];
-                                final isFavorite = favorites.any((c) => c["name"] == clinic["name"]);
+                                final isFavorite = favorites.any(
+                                  (c) => c["name"] == clinic["name"],
+                                );
 
                                 return GestureDetector(
                                   onTap: () {
@@ -319,10 +381,9 @@ class _HomepageState extends ConsumerState<Homepage> {
                                       padding: EdgeInsets.all(10),
                                       decoration: BoxDecoration(
                                         color:
-                                            Theme.of(context).brightness ==
-                                                    Brightness.dark
-                                                ? Colors.black
-                                                : Colors.white,
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.surface,
                                         borderRadius: BorderRadius.circular(8),
                                         border: Border.all(
                                           color:
@@ -332,10 +393,7 @@ class _HomepageState extends ConsumerState<Homepage> {
                                         ),
                                         boxShadow: [
                                           BoxShadow(
-                                            color:
-                                                isDarkMode
-                                                    ? Colors.grey
-                                                    : Colors.blueAccent,
+                                            color: colorScheme.onSurface,
                                             blurRadius: 5,
                                             offset: Offset(0, 2),
                                           ),
@@ -356,27 +414,34 @@ class _HomepageState extends ConsumerState<Homepage> {
                                                     fontWeight: FontWeight.bold,
                                                     fontSize: 16,
                                                     color:
-                                                        isDarkMode
-                                                            ? Colors.white
-                                                            : Colors.black,
+                                                        Theme.of(context)
+                                                            .textTheme
+                                                            .bodyMedium
+                                                            ?.color,
                                                   ),
                                                   overflow:
                                                       TextOverflow.ellipsis,
                                                   maxLines: 2,
                                                 ),
                                               ),
-                                               IconButton(
-                      icon: Icon(
-                        isFavorite
-                            ? Icons.favorite
-                            : Icons.favorite_border, 
-                        color: isFavorite ? Colors.red : Colors.grey,
-                      ),
-                      onPressed: () {
-                        favoriteClinics.toggleFavorite(clinic);
-                        logger.w("Favorite Clinics Updated: $favoriteClinics");
-                      },
-                    ),
+                                              IconButton(
+                                                icon: Icon(
+                                                  isFavorite
+                                                      ? Icons.favorite
+                                                      : Icons.favorite_border,
+                                                  color:
+                                                      isFavorite
+                                                          ? Colors.red
+                                                          : Colors.grey,
+                                                ),
+                                                onPressed: () {
+                                                  favoriteClinics
+                                                      .toggleFavorite(clinic);
+                                                  logger.w(
+                                                    "Favorite Clinics Updated: $favoriteClinics",
+                                                  );
+                                                },
+                                              ),
                                             ],
                                           ),
                                           SizedBox(height: 5),
@@ -385,14 +450,21 @@ class _HomepageState extends ConsumerState<Homepage> {
                                               Icon(
                                                 Icons.location_on,
                                                 size: 14,
-                                                color: Colors.grey,
+                                                color:
+                                                    Theme.of(
+                                                      context,
+                                                    ).iconTheme.color,
                                               ),
                                               SizedBox(width: 5),
                                               Expanded(
                                                 child: Text(
                                                   clinic['address']!,
                                                   style: TextStyle(
-                                                    color: Colors.grey,
+                                                    color:
+                                                        Theme.of(context)
+                                                            .textTheme
+                                                            .bodyMedium
+                                                            ?.color,
                                                   ),
                                                   overflow:
                                                       TextOverflow.ellipsis,
@@ -408,9 +480,9 @@ class _HomepageState extends ConsumerState<Homepage> {
                                                 Icons.phone,
                                                 size: 14,
                                                 color:
-                                                    isDarkMode
-                                                        ? Colors.white
-                                                        : Colors.black,
+                                                    Theme.of(
+                                                      context,
+                                                    ).iconTheme.color,
                                               ),
                                               SizedBox(width: 4),
                                               Text(
@@ -421,9 +493,10 @@ class _HomepageState extends ConsumerState<Homepage> {
                                                 style: TextStyle(
                                                   fontSize: 12,
                                                   color:
-                                                      isDarkMode
-                                                          ? Colors.white
-                                                          : Colors.black,
+                                                      Theme.of(context)
+                                                          .textTheme
+                                                          .bodyMedium
+                                                          ?.color,
                                                   fontStyle:
                                                       clinic["phone"]
                                                                   ?.isNotEmpty ==
@@ -440,16 +513,17 @@ class _HomepageState extends ConsumerState<Homepage> {
                                             style: TextStyle(
                                               fontSize: 12,
                                               color:
-                                                  isDarkMode
-                                                      ? Colors.white
-                                                      : Colors.black,
+                                                  Theme.of(
+                                                    context,
+                                                  ).textTheme.bodyMedium?.color,
                                             ),
                                           ),
                                           SizedBox(height: 8),
-                                            buildClinicRating(
-                                                clinic['rating']!,
-                                                "${(int.tryParse(clinic['review']?.toString() ?? '0')?.abs() ?? 0)}",
-                                              ),
+                                          buildClinicRating(
+                                            clinic['rating']!,
+                                            "${(int.tryParse(clinic['review']?.toString() ?? '0')?.abs() ?? 0)}",
+                                            context,
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -474,7 +548,11 @@ class _HomepageState extends ConsumerState<Homepage> {
   }
 }
 
-Widget buildClinicRating(String rating, String reviewCount) {
+Widget buildClinicRating(
+  String rating,
+  String reviewCount,
+  BuildContext context,
+) {
   double ratingValue = double.tryParse(rating) ?? 0.0;
   int fullStars = ratingValue.floor();
   bool hasHalfStar = ratingValue - fullStars >= 0.5;
@@ -487,7 +565,7 @@ Widget buildClinicRating(String rating, String reviewCount) {
         style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.bold,
-          color: Colors.black87,
+          color: Theme.of(context).textTheme.bodyMedium?.color,
         ),
       ),
 
@@ -515,58 +593,80 @@ Future<Map<String, dynamic>?> showFilterPopup(
   String? selectedCity,
 }) async {
   final ScrollController scrollController = ScrollController();
-  Map<String, Map<String, List<String>>> listData = {};
+  Map<String, Map<String, dynamic>> listData = {};
 
   void scrollToSection(double offset) {
-  Future.delayed(Duration(milliseconds: 300), () {
-    if (scrollController.hasClients) {
-      scrollController.animateTo(
-        offset,
-        duration: Duration(milliseconds: 450),
-        curve: Curves.easeInOut,
-      );
-    } else {
-      logger.w("ScrollController is not attached to any scroll view.");
-    }
-  });
-}
-
+    Future.delayed(Duration(milliseconds: 300), () {
+      if (scrollController.hasClients) {
+        scrollController.animateTo(
+          offset,
+          duration: Duration(milliseconds: 450),
+          curve: Curves.easeInOut,
+        );
+      } else {
+        logger.w("ScrollController is not attached to any scroll view.");
+      }
+    });
+  }
 
   void scrollToCountries(String treatment) {
     if (listData.containsKey(treatment)) {
       List<String> countries = listData[treatment]!.keys.toList();
-
-      if (countries.length > 1) {
+      if (countries.isNotEmpty) {
         scrollToSection(150);
       }
     }
   }
 
   void scrollToCities() {
-    scrollToSection(200);
+    scrollToSection(150);
   }
 
-  Future<Map<String, List<String>>> fetchCountriesAndCities(
+  String getTranslatedKey(String baseKey, String langCode) {
+    switch (langCode.toLowerCase()) {
+      case 'ru':
+        return '${baseKey}_RU';
+      case 'kk':
+      case 'kz':
+        return '${baseKey}_KZ';
+      default:
+        return baseKey;
+    }
+  }
+
+  String getTranslatedCategoryField(String langCode) {
+    if (langCode == 'ru') return 'Category_RU';
+    if (langCode == 'kk') return 'Category_KZ';
+    return 'Category';
+  }
+
+  Future<Map<String, dynamic>> fetchCountriesAndCategories(
     String treatment,
+    BuildContext context,
   ) async {
-    treatment = treatment.trim();
+    final appLocalizations = AppLocalizations.of(context)!;
+    final localizedCategory = appLocalizations.translate(treatment);
+    final langCode = appLocalizations.locale.languageCode;
 
-    var treatmentSnapshot =
+    final translatedCountryKey = getTranslatedKey('Country', langCode);
+    final translatedCityKey = getTranslatedKey('City', langCode);
+    final translatedCategoryKey = getTranslatedCategoryField(langCode);
+    final categorySnap =
         await FirebaseFirestore.instance
-            .collection('clinics')
-            .where('Category', isEqualTo: treatment)
+            .collection('translation_clinics')
+            .where(translatedCategoryKey, isEqualTo: localizedCategory)
             .get();
-
-    if (treatmentSnapshot.docs.isEmpty) {
+    if (categorySnap.docs.isEmpty) {
       logger.w("No data found for treatment: $treatment");
       return {};
     }
+    logger.w('Categories from Firestore:', categorySnap);
 
-    Map<String, List<String>> countryCityMap = {};
+    final Map<String, List<String>> countryCityMap = {};
 
-    for (var doc in treatmentSnapshot.docs) {
-      String country = doc['Country'];
-      String city = doc['City'];
+    for (var doc in categorySnap.docs) {
+      final country = doc[translatedCountryKey] ?? doc['Country'].toString();
+      final city = doc[translatedCityKey] ?? doc['City'].toString();
 
       if (country.isNotEmpty && city.isNotEmpty) {
         countryCityMap.putIfAbsent(country, () => []);
@@ -575,15 +675,24 @@ Future<Map<String, dynamic>?> showFilterPopup(
         }
       }
     }
-
-    listData[treatment] = countryCityMap;
-
-    logger.w("Fetched treatment data: $listData");
-
     return countryCityMap;
   }
 
+  Future<String> getSelectedLanguage() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('selectedLanguage') ?? 'en';
+  }
+
+  // ignore: unused_local_variable
+  String selectedLanguage = await getSelectedLanguage();
+  // ignore: use_build_context_synchronously
+  final theme = Theme.of(context);
+  final textColor = theme.textTheme.bodyMedium?.color;
+  //final isDarkMode = theme.brightness == Brightness.dark;
+  // ignore: use_build_context_synchronously
+  final appLocalizations = AppLocalizations.of(context);
   return showDialog<Map<String, dynamic>>(
+    // ignore: use_build_context_synchronously
     context: context,
     builder: (context) {
       return StatefulBuilder(
@@ -623,7 +732,7 @@ Future<Map<String, dynamic>?> showFilterPopup(
                     Padding(
                       padding: const EdgeInsets.only(top: 10, bottom: 5),
                       child: Text(
-                        "Type of Operations",
+                        appLocalizations!.translate('type_operations'),
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -632,10 +741,10 @@ Future<Map<String, dynamic>?> showFilterPopup(
                       runSpacing: 10,
                       children:
                           [
-                            "Plastic surgery clinic",
-                            "Orthopedic clinic",
-                            "Oncological clinics",
-                            "Neurosurgery",
+                            appLocalizations.translate('plastic_surgery'),
+                            appLocalizations.translate('orthopedic'),
+                            appLocalizations.translate('oncological'),
+                            appLocalizations.translate('neurosurgery'),
                           ].map((treatment) {
                             bool isSelected = selectedTreatment == treatment;
                             return GestureDetector(
@@ -645,11 +754,18 @@ Future<Map<String, dynamic>?> showFilterPopup(
                                   selectedCountry = null;
                                   selectedCity = null;
                                 });
-                                var fetchedData = await fetchCountriesAndCities(
-                                  treatment,
-                                );
+                                var fetchedData =
+                                    await fetchCountriesAndCategories(
+                                      treatment,
+                                      context,
+                                    );
                                 setState(() {
                                   listData[treatment] = fetchedData;
+                                });
+                                WidgetsBinding.instance.addPostFrameCallback((
+                                  _,
+                                ) {
+                                  scrollToCountries(treatment);
                                 });
                               },
                               child: Container(
@@ -660,18 +776,22 @@ Future<Map<String, dynamic>?> showFilterPopup(
                                 decoration: BoxDecoration(
                                   color:
                                       isSelected
-                                          ? Colors.blueAccent
-                                          : Colors.white,
+                                          ? (theme.brightness == Brightness.dark
+                                              ? Colors.white
+                                              : Colors.blue)
+                                          : theme.scaffoldBackgroundColor,
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.grey),
+                                  border: Border.all(
+                                    color:
+                                        theme.brightness == Brightness.dark
+                                            ? Colors.white
+                                            : Colors.black,
+                                  ),
                                 ),
                                 child: Text(
                                   treatment,
                                   style: TextStyle(
-                                    color:
-                                        isSelected
-                                            ? Colors.white
-                                            : Colors.black,
+                                    color: textColor,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12,
                                   ),
@@ -693,12 +813,12 @@ Future<Map<String, dynamic>?> showFilterPopup(
                       runSpacing: 10,
                       children:
                           [
-                            "Ent clinics",
-                            "Gastroenterology clinics",
-                            "Urology  clinics",
-                            "Ophthalmology  clinics",
-                            "Dermatology clinics",
-                            "Physical Therapy & Rehabilitation Clinic",
+                            appLocalizations.translate('ent'),
+                            appLocalizations.translate('gastroenterology'),
+                            appLocalizations.translate('urology'),
+                            appLocalizations.translate('ophthalmology'),
+                            appLocalizations.translate('dermatology'),
+                            appLocalizations.translate('physical'),
                           ].map((treatment) {
                             bool isSelected = selectedTreatment == treatment;
                             return GestureDetector(
@@ -708,12 +828,18 @@ Future<Map<String, dynamic>?> showFilterPopup(
                                   selectedCountry = null;
                                   selectedCity = null;
                                 });
-                                var fetchedData = await fetchCountriesAndCities(
-                                  treatment,
-                                );
-
+                                var fetchedData =
+                                    await fetchCountriesAndCategories(
+                                      treatment,
+                                      context,
+                                    );
                                 setState(() {
                                   listData[treatment] = fetchedData;
+                                });
+                                WidgetsBinding.instance.addPostFrameCallback((
+                                  _,
+                                ) {
+                                  scrollToCountries(treatment);
                                 });
                               },
                               child: Container(
@@ -724,18 +850,22 @@ Future<Map<String, dynamic>?> showFilterPopup(
                                 decoration: BoxDecoration(
                                   color:
                                       isSelected
-                                          ? Colors.blueAccent
-                                          : Colors.white,
+                                          ? (theme.brightness == Brightness.dark
+                                              ? Colors.white
+                                              : Colors.blue)
+                                          : theme.scaffoldBackgroundColor,
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.grey),
+                                  border: Border.all(
+                                    color:
+                                        theme.brightness == Brightness.dark
+                                            ? Colors.white
+                                            : Colors.black,
+                                  ),
                                 ),
                                 child: Text(
                                   treatment,
                                   style: TextStyle(
-                                    color:
-                                        isSelected
-                                            ? Colors.white
-                                            : Colors.black,
+                                    color: textColor,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12,
                                   ),
@@ -764,7 +894,6 @@ Future<Map<String, dynamic>?> showFilterPopup(
                                 onTap: () {
                                   setState(() {
                                     selectedCountry = country;
-                                    selectedCity = null;
                                   });
                                   scrollToCountries(selectedTreatment!);
                                 },
@@ -774,22 +903,29 @@ Future<Map<String, dynamic>?> showFilterPopup(
                                     vertical: 10,
                                   ),
                                   decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.grey),
-                                    borderRadius: BorderRadius.circular(10),
                                     color:
                                         selectedCountry == country
-                                            ? Colors.blueAccent
-                                            : Colors.white,
+                                            ? (theme.brightness ==
+                                                    Brightness.dark
+                                                ? Colors.white
+                                                : Colors.blue)
+                                            : Colors.transparent,
+                                    border: Border.all(
+                                      color:
+                                          theme.brightness == Brightness.dark
+                                              ? Colors
+                                                  .white 
+                                              : Colors.black,
+                                    ),
+
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
                                     country,
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
-                                      color:
-                                          selectedCountry == country
-                                              ? Colors.white
-                                              : Colors.black,
+                                      color: textColor,
                                     ),
                                   ),
                                 ),
@@ -818,74 +954,61 @@ Future<Map<String, dynamic>?> showFilterPopup(
                                 spacing: 10,
                                 runSpacing: 10,
                                 children:
-                                    listData[selectedTreatment]![selectedCountry]!
-                                        .map((city) {
-                                          return GestureDetector(
-                                            onTap: () {
-                                              setState(() {
-                                                selectedCity = city;
+                                    listData[selectedTreatment]![selectedCountry]!.map<
+                                      Widget
+                                    >((city) {
+                                      return GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            selectedCity = city;
+                                          });
+                                          scrollToCities();
+                                          if (selectedTreatment != null &&
+                                              selectedCountry != null &&
+                                              selectedCity != null) {
+                                            if (Navigator.canPop(context)) {
+                                              Navigator.pop(context, {
+                                                "category": selectedTreatment,
+                                                "country": selectedCountry,
+                                                "city": selectedCity,
                                               });
-                                              scrollToCities();
-                                              if (selectedTreatment != null &&
-                                                  selectedCountry != null &&
-                                                  selectedCity != null) {
-                                                if (Navigator.canPop(context)) {
-                                                  Navigator.pop(context, {
-                                                    "category":
-                                                        selectedTreatment,
-                                                    "country": selectedCountry,
-                                                    "city": selectedCity,
-                                                  });
-                                                }
-                                              } else {
-                                                logger.w(
-                                                  "Please select a treatment, country, and city first.",
-                                                );
-                                              }
-                                            },
-                                            child: Container(
-                                              padding: EdgeInsets.symmetric(
-                                                horizontal: 15,
-                                                vertical: 10,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                border: Border.all(
-                                                  color:
-                                                      Theme.of(
-                                                                context,
-                                                              ).brightness ==
-                                                              Brightness.dark
-                                                          ? Colors.white70
-                                                          : Colors.grey,
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                                color:
-                                                    Theme.of(
-                                                              context,
-                                                            ).brightness ==
-                                                            Brightness.dark
-                                                        ? Colors.black54
-                                                        : Colors.white,
-                                              ),
-                                              child: Text(
-                                                city,
-                                                style: TextStyle(
-                                                  color:
-                                                      Theme.of(
-                                                                context,
-                                                              ).brightness ==
-                                                              Brightness.dark
-                                                          ? Colors.white
-                                                          : Colors.black,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
+                                            }
+                                          } else {
+                                            logger.w(
+                                              "Please select a treatment, country, and city first.",
+                                            );
+                                          }
+                                        },
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 15,
+                                            vertical: 10,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                theme.scaffoldBackgroundColor,
+                                            border: Border.all(
+                                              color:
+                                                  theme.brightness ==
+                                                          Brightness.dark
+                                                      ? Colors.white
+                                                      : Colors.black,
                                             ),
-                                          );
-                                        })
-                                        .toList(),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            city,
+                                            style: TextStyle(
+                                              color: textColor,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
                               ),
                             ),
                           ),
