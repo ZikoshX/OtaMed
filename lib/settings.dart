@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_application_1/help.dart';
+import 'package:flutter_application_1/notification_service.dart';
 import 'package:flutter_application_1/personal_info.dart';
 import 'package:flutter_application_1/widget/dart_mode_switch.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart' as riverpod;
@@ -9,6 +11,7 @@ import 'package:flutter_application_1/login.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_application_1/localization/app_localization.dart';
 import 'package:flutter_application_1/localization/language_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 var logger = Logger();
 
@@ -23,11 +26,26 @@ class _SettingPage extends ConsumerState<SettingPage> {
   String? selectedLanguage = "EN";
   String userName = "";
   String imageUrl = "";
+  bool notificationsEnabled = true;
+  final NotificationService notificationService = NotificationService();
 
   @override
   void initState() {
     super.initState();
     fetchUserData();
+    loadNotificationPreference();
+  }
+
+  void loadNotificationPreference() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
+    });
+  }
+
+  void _saveNotificationPreference(bool value) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notifications_enabled', value);
   }
 
   void fetchUserData() async {
@@ -65,6 +83,11 @@ class _SettingPage extends ConsumerState<SettingPage> {
     );
   }
 
+  void changeLanguage(String langCode) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selectedLanguage', langCode); // 'en', 'ru', 'kz'
+  }
+
   @override
   Widget build(BuildContext context) {
     final languageNotifier = ref.read(languageProvider.notifier);
@@ -76,7 +99,7 @@ class _SettingPage extends ConsumerState<SettingPage> {
 
     final theme = Theme.of(context);
     final textColor = theme.textTheme.bodyMedium?.color;
-
+    //var isDarkMode = theme.brightness == Brightness.dark;
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
@@ -108,53 +131,52 @@ class _SettingPage extends ConsumerState<SettingPage> {
                       );
                     },
                     child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 35,
-                            backgroundImage:
-                                imageUrl.isNotEmpty
-                                    ? NetworkImage(imageUrl)
-                                    : AssetImage("images/photo.jpeg")
-                                        as ImageProvider,
-                          ),
-                          const SizedBox(width: 25),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                userName.isNotEmpty ? userName : "User",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w500,
-                                  color: textColor,
-                                ),
+                      children: [
+                        CircleAvatar(
+                          radius: 35,
+                          backgroundImage:
+                              imageUrl.isNotEmpty
+                                  ? NetworkImage(imageUrl)
+                                  : AssetImage("images/photo.jpeg")
+                                      as ImageProvider,
+                        ),
+                        const SizedBox(width: 25),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              userName.isNotEmpty ? userName : "User",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                                color: textColor,
                               ),
-                              Text(
-                                appLocalizations.translate('personal_info'),
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Spacer(),
-                          Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(15),
                             ),
-                            child: const Icon(Icons.chevron_right_outlined),
+                            Text(
+                              appLocalizations.translate('personal_info'),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(15),
                           ),
-                        ],
-                     
+                          child: const Icon(Icons.chevron_right_outlined),
+                        ),
+                      ],
                     ),
                   ),
-                ], 
+                ],
               ),
               const SizedBox(height: 20),
-                Padding(
+              Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Text(
                   appLocalizations.translate('settings'),
@@ -226,6 +248,56 @@ class _SettingPage extends ConsumerState<SettingPage> {
                       appLocalizations.translate('notifications'),
                       style: TextStyle(color: textColor),
                     ),
+                    trailing: Switch(
+                      value: notificationsEnabled,
+                      onChanged: (bool newValue) {
+                        setState(() {
+                          notificationsEnabled = newValue;
+                        });
+
+                        _saveNotificationPreference(newValue);
+
+                        if (newValue) {
+                          notificationService.initNotification();
+                          notificationService.showNotification(
+                            id: 1,
+                            title: "We miss you! 🫶",
+                            body:
+                                "Come back and continue your search. You might find what you need!",
+                          );
+                        } else {
+                          notificationService.notification.cancel(1);
+                        }
+                      },
+                      thumbColor: WidgetStateProperty.resolveWith<Color>((
+                        states,
+                      ) {
+                        final isDark =
+                            Theme.of(context).brightness == Brightness.dark;
+                        if (states.contains(WidgetState.selected)) {
+                          return isDark
+                              ? Colors.white
+                              : Colors.black; // active thumb
+                        }
+                        return isDark
+                            ? Colors.white
+                            : Colors.black; // inactive thumb
+                      }),
+                      trackColor: WidgetStateProperty.resolveWith<Color>((
+                        states,
+                      ) {
+                        final isDark =
+                            Theme.of(context).brightness == Brightness.dark;
+                        if (states.contains(WidgetState.selected)) {
+                          return isDark
+                              ? Colors.white
+                              : Colors.lightBlueAccent;
+                        }
+                        return isDark
+                            ? Colors.grey.shade700
+                            : Colors.grey.shade300;
+                      }),
+                    ),
                   ),
                   Divider(color: Colors.grey.shade400),
                   ListTile(
@@ -239,18 +311,26 @@ class _SettingPage extends ConsumerState<SettingPage> {
                 ],
               ),
               const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  border: Border.all(color: Colors.grey.shade400),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: ListTile(
-                  leading: Icon(Icons.help, color: Colors.blueGrey),
-                  title: Text(
-                    appLocalizations.translate('help'),
-                    style: TextStyle(color: textColor),
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const HelpScreen()),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    border: Border.all(color: Colors.grey.shade400),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: ListTile(
+                    leading: Icon(Icons.help, color: Colors.blueGrey),
+                    title: Text(
+                      appLocalizations.translate('help'),
+                      style: TextStyle(color: textColor),
+                    ),
                   ),
                 ),
               ),
@@ -293,17 +373,17 @@ class _SettingPage extends ConsumerState<SettingPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-           if (title.isNotEmpty) ...[
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w500,
-              color: Theme.of(context).textTheme.bodyMedium?.color,
+          if (title.isNotEmpty) ...[
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
-           ],
+            const SizedBox(height: 10),
+          ],
           ...children,
         ],
       ),
