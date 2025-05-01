@@ -10,7 +10,7 @@ class ClinicDetail extends StatelessWidget {
 
   const ClinicDetail({super.key, required this.clinic});
 
-Widget buildWebsiteSection(String? siteUrl) {
+Widget buildWebsiteSection(String? siteUrl, BuildContext context) {
   if (siteUrl == null || siteUrl.isEmpty) {
     return Container(
       padding: EdgeInsets.all(12),
@@ -24,7 +24,7 @@ Widget buildWebsiteSection(String? siteUrl) {
           SizedBox(width: 8),
           Text(
             "No Website Available",
-            style: TextStyle(fontSize: 16, color: Colors.grey),
+            style: TextStyle(fontSize: 16, color: Theme.of(context).textTheme.bodyMedium?.color),
           ),
         ],
       ),
@@ -40,7 +40,7 @@ Widget buildWebsiteSection(String? siteUrl) {
   final RegExp urlRegex = RegExp(r'^(https?:\/\/[^\s/]+)');
   final match = urlRegex.firstMatch(siteUrl);
   if (match != null) {
-    siteUrl = match.group(0)!; // Keep only the valid domain part
+    siteUrl = match.group(0)!; 
   } else {
     return Container(
       padding: EdgeInsets.all(12),
@@ -140,7 +140,7 @@ Widget buildWebsiteSection(String? siteUrl) {
                       SizedBox(width: 5),
                       Text(
                         clinic['description'] ?? 'No Description Available',
-                        style: TextStyle(fontSize: 16, color: Colors.black87),
+                        style: TextStyle(fontSize: 16, color: Theme.of(context).textTheme.bodyMedium?.color),
                         textAlign: TextAlign.justify,
                       ),
                     ],
@@ -238,12 +238,11 @@ Widget buildWebsiteSection(String? siteUrl) {
               ),
             ),
             SizedBox(height: 15),
-             Text("Review", style: TextStyle(fontWeight: FontWeight.bold)),
+            Text("Review", style: TextStyle(fontWeight: FontWeight.bold)),
               SizedBox(height: 5),
             Container(
               padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.blueAccent, width: 1),
               ),
@@ -256,7 +255,7 @@ Widget buildWebsiteSection(String? siteUrl) {
                         Icons.reviews,
                         size: 22,
                         color: Colors.blueAccent,
-                      ), // Review icon
+                      ), 
                       SizedBox(width: 8),
                       Text(
                         "${(int.tryParse(clinic['review']?.toString() ?? '0')?.abs() ?? 0)} reviews",
@@ -272,7 +271,7 @@ Widget buildWebsiteSection(String? siteUrl) {
             SizedBox(height: 5),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [buildWebsiteSection(clinic['site_url'])],
+              children: [buildWebsiteSection(clinic['site_url'],context)],
             ),
             SizedBox(height: 15),
              Text("Phone_number", style: TextStyle(fontWeight: FontWeight.bold)),
@@ -280,7 +279,6 @@ Widget buildWebsiteSection(String? siteUrl) {
             Container(
               padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.blueAccent, width: 1),
               ),
@@ -301,7 +299,6 @@ Widget buildWebsiteSection(String? siteUrl) {
             Container(
               padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.blueAccent, width: 1),
               ),
@@ -316,7 +313,7 @@ Widget buildWebsiteSection(String? siteUrl) {
                   Expanded(
                     child: Text(
                       clinic['availability'] ?? 'No Availability Info',
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(fontSize: 16, color: Theme.of(context).textTheme.bodyMedium?.color),
                     ),
                   ),
                 ],
