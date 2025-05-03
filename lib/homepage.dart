@@ -613,14 +613,15 @@ Future<Map<String, dynamic>?> showFilterPopup(
     if (listData.containsKey(treatment)) {
       List<String> countries = listData[treatment]!.keys.toList();
       if (countries.isNotEmpty) {
-        scrollToSection(150);
+        scrollToSection(0.5);
       }
     }
   }
 
   void scrollToCities() {
-    scrollToSection(150);
+    scrollToSection(100);
   }
+
 
   String getTranslatedKey(String baseKey, String langCode) {
     switch (langCode.toLowerCase()) {
