@@ -245,34 +245,34 @@ switch (selectedLanguageCode) {
   case 'ru':
     prompt = """
 Ты — ассистент, который помогает находить информацию.
-Сделай вид, что ты ищешь в интернете свежие статьи о клинике '$clinicName', расположенной в городе $city, $country.
-Представь 3-5 статей с короткими аннотациями и укажи для каждой ссылку (даже если она будет вымышленной).
+Сделай вид, что ты ищешь в интернете  статьи про клинике '$clinicName', расположенной в городе $city, $country.
+Используй только настоящие источники и ссылки, чтобы предоставить 3-5 статей с аннотациями даже если старые.
 Формат:
 - Название статьи
 - Краткое содержание
-- Ссылка в формате [Текст ссылки](https://your-link.com)
+- Ссылка в формате [Текст ссылки](https://реальная-ссылка.com)
 """;
     break;
   case 'kk':
     prompt = """
 Сен ақпарат табатын көмекшісің.
-'$clinicName' клиникасы туралы $city, $country қаласында орналасқан соңғы мақалаларды тауып жатқандай бол.
-Әр мақала үшін қысқаша сипаттама және сілтеме көрсет (ойдан шығарылған болса да).
+'$clinicName' клиникасы туралы $city, $country қаласында орналасқан барлық мақалаларды(3-5) тауып жатқандай бол.
+Тек нақты ақпарат пен шын сілтемелерді қолданып, әр мақала үшін қысқаша сипаттама және сілтемені көрсет.
 Формат:
 - Мақала атауы
 - Қысқаша сипаттама
-- Сілтемені [Сілтеме мәтіні](https://your-link.com) форматында бер.
+- Сілтемені [Сілтеме мәтіні](https://настоящий-сілтеме.com) форматында бер.
 """;
     break;
   default: 
     prompt = """
 You are an assistant that helps find information.
-Pretend you are searching the internet for recent articles about the clinic '$clinicName' located in $city, $country.
-Provide 3-5 article summaries with titles and a link for each (the links can be fictional).
+Pretend you are searching the internet for all articles about the clinic '$clinicName' located in $city, $country.
+Use only real sources and links. Provide 3-5 article summaries with titles and a real link for each.
 Format:
 - Article Title
 - Short Summary
-- Link in the format [Link Text](https://your-link.com)
+- Link in the format [Link Text](https://real-link.com)
 """;
 }
 
