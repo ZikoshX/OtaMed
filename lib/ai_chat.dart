@@ -544,73 +544,69 @@ class _AiChatState extends State<AiChat> {
     }
   }
 
-  Future<void> _handleFinalOption(String option) async {
-    if (selectedCategory == null || selectedCountry == null) {
-      setState(() {
-        messages.add({
-          "isUser": false,
-          "text": _getCategorySelectMessage(selectedLanguageCode!),
-        });
-      });
-      return;
-    }
-    final loadingMessage = _getLoadingMessage(selectedLanguageCode!);
-
+Future<void> _handleFinalOption(String option) async {
+  if (selectedCategory == null || selectedCountry == null) {
     setState(() {
-      messages.add({"isUser": false, "text": loadingMessage});
-    });
-
-    String response = "";
-
-    if (option == _getOptionButtons(selectedLanguageCode!)[0]) {
-      response = await _geminiAI.analyzeClinic(
-        selectedClinic!,
-        selectedCategory!,
-        selectedCountry!,
-        selectedLanguageCode!,
-      );
-    } else if (option == _getOptionButtons(selectedLanguageCode!)[1]) {
-      response = await _geminiAI.findArticles(
-        selectedClinic!,
-        selectedLanguageCode!,
-      );
-    }
-
-    setState(() {
-      messages.removeLast();
-
-      if (response.isNotEmpty) {
-        messages.add({"isUser": false, "text": response});
-      } else {
-        messages.add({
-          "isUser": false,
-          "text": "Sorry, no response available.",
-        });
-      }
-
-      List<String> optionButtons = [];
-      if (option == _getOptionButtons(selectedLanguageCode!)[0]) {
-        optionButtons.add(_getOptionButtons(selectedLanguageCode!)[1]);
-      } else {
-        optionButtons.add(_getOptionButtons(selectedLanguageCode!)[0]);
-      }
-      optionButtons.add(
-        getButtonLabel("Show Clinic List", selectedLanguageCode!),
-      );
-      optionButtons.add(
-        getButtonLabel("Select New Category", selectedLanguageCode!),
-      );
-
       messages.add({
         "isUser": false,
-        "buttons": optionButtons,
-        "category": selectedCategory,
-        "country": selectedCountry,
+        "text": _getCategorySelectMessage(selectedLanguageCode!),
       });
     });
-
-    _saveChatHistory();
+    return;
   }
+
+  final loadingMessage = _getLoadingMessage(selectedLanguageCode!);
+
+  setState(() {
+    messages.add({"isUser": false, "text": loadingMessage});
+  });
+
+  String response = "";
+  final options = _getOptionButtons(selectedLanguageCode!);
+
+  if (option == options[0]) {
+    response = await _geminiAI.analyzeClinic(
+      selectedClinic!,
+      selectedCategory!,
+      selectedCountry!,
+      selectedLanguageCode!,
+    );
+  } else if (option == options[1]) {
+    response = await _geminiAI.findArticles(
+      selectedClinic!,
+      selectedLanguageCode!,
+    );
+  }
+  final remainingOption = option == options[0] ? options[1] : options[0];
+
+  setState(() {
+    messages.removeLast(); 
+
+    if (response.isNotEmpty) {
+      messages.add({"isUser": false, "text": response});
+    } else {
+      messages.add({
+        "isUser": false,
+        "text": "Sorry, no response available.",
+      });
+    }
+    final optionButtons = <String>[
+      remainingOption,
+      getButtonLabel("Show Clinic List", selectedLanguageCode!),
+      getButtonLabel("Select New Category", selectedLanguageCode!),
+    ];
+
+    messages.add({
+      "isUser": false,
+      "buttons": optionButtons,
+      "category": selectedCategory,
+      "country": selectedCountry,
+    });
+  });
+
+  _saveChatHistory();
+}
+
 
   void _askCategorySelection() {
     setState(() {
@@ -679,81 +675,75 @@ class _AiChatState extends State<AiChat> {
     }
   }
 
-  /*void _showRemainingButtons(String selectedOption) {
-    setState(() {
-      List<String> remainingButtons = [];
-
-      // Добавляем кнопки, которые не были выбраны
-      if (selectedOption != "Show Clinic List") {
-        remainingButtons.add(
-          getButtonLabel("Show Clinic List", selectedLanguageCode!),
-        );
-      }
-      if (selectedOption != "Select New Category") {
-        remainingButtons.add(
-          getButtonLabel("Select New Category", selectedLanguageCode!),
-        );
-      }
-
-      // Добавляем кнопки для анализа и поиска статей, если они не были выбраны
-      if (selectedOption != _getOptionButtons(selectedLanguageCode!)[0]) {
-        remainingButtons.add(_getOptionButtons(selectedLanguageCode!)[0]);
-      }
-      if (selectedOption != _getOptionButtons(selectedLanguageCode!)[1]) {
-        remainingButtons.add(_getOptionButtons(selectedLanguageCode!)[1]);
-      }
-
-      if (remainingButtons.isNotEmpty) {
-        messages.add({"isUser": false, "buttons": remainingButtons});
-      }
-    });
-  }
-*/
   Future<void> _handleClinicList(
-    String category,
-    String country,
-    String languageCode,
+    String? category,
+    String? country,
+    String? languageCode,
   ) async {
-    logger.w(
-      "Handling clinic list with category: $category, country: $country, lang: $languageCode",
-    );
-    languageCode = selectedLanguageCode!;
+    if (category == null || country == null || languageCode == null) {
+      logger.e(
+        "Missing required parameters: category=$category, country=$country, lang=$languageCode",
+      );
+      return;
+    }
+
     final categoryField = getTranslatedCategoryField(languageCode);
     final countryField = getTranslatedCountryField(languageCode);
     final clinicsField = getTranslatedClinicsField(languageCode);
 
-    QuerySnapshot snapshot =
-        await FirebaseFirestore.instance
-            .collection('translation_clinics')
-            .where(categoryField, isEqualTo: category)
-            .where(countryField, isEqualTo: country)
-            .get();
+    logger.w(
+      "Querying Firestore with: categoryField='$categoryField' (value: '$category'), countryField='$countryField' (value: '$country')",
+    );
 
-    List<Map<String, dynamic>> fetchedClinics =
-        snapshot.docs.map((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          return {"name": data[clinicsField]?.toString().trim() ?? ""};
-        }).toList();
+    try {
+      QuerySnapshot snapshot =
+          await FirebaseFirestore.instance
+              .collection('translation_clinics')
+              .where(categoryField, isEqualTo: category.trim())
+              .where(countryField, isEqualTo: country.trim())
+              .get();
 
-    logger.w(fetchedClinics);
+      logger.w("Firestore returned ${snapshot.docs.length} documents");
 
-    setState(() {
-      if (fetchedClinics.isEmpty) {
+      List<Map<String, dynamic>> fetchedClinics =
+          snapshot.docs
+              .map((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                final clinicName = data[clinicsField]?.toString().trim() ?? "";
+                logger.w("Clinic data: $data → Extracted name: '$clinicName'");
+                return {"name": clinicName};
+              })
+              .where((c) => c["name"] != "")
+              .toList(); // фильтруем пустые
+
+      setState(() {
+        clinics = fetchedClinics;
+        selectedClinic = null; // 🔧 сбрасываем выбор, чтобы показать список
+
+        if (fetchedClinics.isEmpty) {
+          messages.add({
+            "text": getNoClinicsMessage(languageCode),
+            "isUser": false,
+            "buttons": ["Select New Category"],
+          });
+        } else {
+          messages.add({
+            "text": _getClinicSelectMessage(languageCode),
+            "isUser": false,
+            "buttons": fetchedClinics.map((c) => c["name"] as String).toList(),
+          });
+        }
+      });
+    } catch (e) {
+      logger.e("Error fetching clinics: $e");
+      setState(() {
         messages.add({
-          "text": getNoClinicsMessage(languageCode),
+          "text": "Error loading clinics. Please try again.",
           "isUser": false,
           "buttons": ["Select New Category"],
         });
-      } else {
-        clinics = fetchedClinics;
-
-        messages.add({
-          "text": "Here are the available clinics:",
-          "isUser": false,
-          "buttons": fetchedClinics.map((c) => c["name"]).toList(),
-        });
-      }
-    });
+      });
+    }
   }
 
   String _getLoadingMessage(String langCode) {
@@ -797,7 +787,6 @@ class _AiChatState extends State<AiChat> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString("chats", jsonEncode(chats));
 
-    // 🔽 Save selected state
     if (selectedCategory != null) {
       await prefs.setString("selectedCategory", selectedCategory!);
     }
@@ -1042,7 +1031,8 @@ class _AiChatState extends State<AiChat> {
                             if (isClinicMode &&
                                 selectedCategory != null &&
                                 selectedCountry == null &&
-                                index == messages.length - 1)
+                                index == messages.length - 1 &&
+                                availableCountries.isNotEmpty)
                               Wrap(
                                 spacing: 8.0,
                                 children:
@@ -1110,65 +1100,11 @@ class _AiChatState extends State<AiChat> {
                                             onTap: () {
                                               handleOptionSelection(
                                                 option,
-                                                category:
-                                                    selectedCategory, // используем selectedCategory, а не из message
-                                                country:
-                                                    selectedCountry, // используем selectedCountry, а не из message
+                                                category: selectedCategory,
+                                                country: selectedCountry,
                                               );
                                             },
-                                            child: Chip(
-                                              label: Text(
-                                                option,
-                                                style: TextStyle(
-                                                  color:
-                                                      isLoading
-                                                          ? Colors.grey
-                                                          : Colors.purple,
-                                                ),
-                                              ),
-                                              backgroundColor:
-                                                  isLoading
-                                                      ? Colors.grey.shade300
-                                                      : Colors.purple.shade50,
-                                            ),
-                                          ),
-                                        )
-                                        .toList(),
-                              ),
-
-                            if (isClinicMode &&
-                                selectedClinic != null &&
-                                index == messages.length - 1)
-                              Wrap(
-                                spacing: 8.0,
-                                children:
-                                    _getOptionButtons(selectedLanguageCode!)
-                                        .map(
-                                          (option) => GestureDetector(
-                                            onTap: () {
-                                              handleOptionSelection(
-                                                option,
-                                                category:
-                                                    selectedCategory, // используем selectedCategory, а не из message
-                                                country:
-                                                    selectedCountry, // используем selectedCountry, а не из message
-                                              );
-                                            },
-                                            child: Chip(
-                                              label: Text(
-                                                option,
-                                                style: TextStyle(
-                                                  color:
-                                                      isLoading
-                                                          ? Colors.grey
-                                                          : Colors.purple,
-                                                ),
-                                              ),
-                                              backgroundColor:
-                                                  isLoading
-                                                      ? Colors.grey.shade300
-                                                      : Colors.purple.shade50,
-                                            ),
+                                            child: Chip(label: Text(option)),
                                           ),
                                         )
                                         .toList(),
@@ -1178,7 +1114,6 @@ class _AiChatState extends State<AiChat> {
                       },
                     ),
           ),
-
           Padding(
             padding: const EdgeInsets.all(5.0),
             child: Row(
