@@ -48,7 +48,17 @@ class _HelpScreenState extends State<HelpScreen> {
             _buildFaqTile(appLocalizations, 'ai_help', 'ai_answer', textColor, theme),
             _buildFaqTile(appLocalizations, 'contact', 'contact_answer', textColor, theme),
             _buildFaqTile(appLocalizations, 'important', 'impor_answer', textColor, theme),
-            _buildFaqTile(appLocalizations, 'faq', 'faq', textColor, theme),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12.0),
+              child: Text(
+                appLocalizations.translate('faq'),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blueAccent,
+                ),
+              ),
+            ),
             _buildFaqTile(appLocalizations, 'procedure', 'procedure_answer', textColor, theme),
             _buildFaqTile(appLocalizations, 'rating', 'rating_answer', textColor, theme),
             _buildFaqTile(appLocalizations, 'number', 'number_answer', textColor, theme),
@@ -63,6 +73,7 @@ class _HelpScreenState extends State<HelpScreen> {
 
   Widget _buildFaqTile(AppLocalizations appLocalizations, String questionKey, String answerKey, Color textColor, ThemeData theme) {
     bool isFaqTitle = questionKey == 'faq';
+    answerKey == 'contact_answer';
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -89,8 +100,8 @@ class _HelpScreenState extends State<HelpScreen> {
                       text: TextSpan(
                         style: TextStyle(fontSize: 14, color: textColor),
                         children: [
-                          const TextSpan(
-                            text: "If you have troubles in app or have questions, you can write to our official mail: ",
+                          TextSpan(
+                          text: appLocalizations.translate(answerKey),
                           ),
                           TextSpan(
                             text: "helpdesk@otamedteam.com",
