@@ -1,3 +1,4 @@
+import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -202,6 +203,7 @@ class _HomeAdminpageState extends ConsumerState<HomeAdminpage> {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
     final colorScheme = theme.colorScheme;
+    final appLocalizations = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
@@ -230,7 +232,7 @@ class _HomeAdminpageState extends ConsumerState<HomeAdminpage> {
                           controller: searchController,
                           onChanged: (value) => onSearchChanged(),
                           decoration: InputDecoration(
-                            hintText: "Search",
+                            hintText: appLocalizations!.translate("search"),
                             hintStyle: TextStyle(color: Colors.white),
                             prefixIcon: Icon(Icons.search, color: Colors.white),
                             fillColor: Colors.white24,
@@ -357,7 +359,7 @@ class _HomeAdminpageState extends ConsumerState<HomeAdminpage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Available Clinics:',
+                            appLocalizations.translate('available'),
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -650,9 +652,30 @@ class _HomeAdminpageState extends ConsumerState<HomeAdminpage> {
                         ],
                       )
                       : Center(
-                        child: Text(
-                          "No clinics available",
-                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                        child: AnimatedTextKit(
+                          animatedTexts: [
+                            TypewriterAnimatedText(
+                              'OtaMed',
+                              textStyle: TextStyle(
+                                fontSize: 38.0,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blueAccent,
+                                letterSpacing: 10,
+                              ),
+                              speed: Duration(milliseconds: 200),
+                            ),
+                            FadeAnimatedText(
+                              'Welcome Back!',
+                              textStyle: TextStyle(
+                                fontSize: 32.0,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue,
+                              ),
+                              duration: Duration(seconds: 2),
+                            ),
+                          ],
+                          totalRepeatCount: 1,
+                          pause: Duration(milliseconds: 500),
                         ),
                       ),
             ),
@@ -736,7 +759,6 @@ Future<Map<String, dynamic>?> showFilterPopup(
   void scrollToCities() {
     scrollToSection(100);
   }
-
 
   String getTranslatedKey(String baseKey, String langCode) {
     switch (langCode.toLowerCase()) {
@@ -984,7 +1006,7 @@ Future<Map<String, dynamic>?> showFilterPopup(
                       Padding(
                         padding: const EdgeInsets.only(top: 20, bottom: 5),
                         child: Text(
-                          "Country",
+                          appLocalizations.translate('country'),
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -1042,7 +1064,7 @@ Future<Map<String, dynamic>?> showFilterPopup(
                       Padding(
                         padding: const EdgeInsets.only(top: 20, bottom: 5),
                         child: Text(
-                          "Cities in $selectedCountry",
+                          appLocalizations.translate('city'),
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
