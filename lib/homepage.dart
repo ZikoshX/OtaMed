@@ -8,7 +8,7 @@ import 'package:logger/logger.dart';
 import 'package:flutter_application_1/favorite_provider.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'dart:io';
 var logger = Logger();
 
 class Homepage extends ConsumerStatefulWidget {
@@ -609,19 +609,22 @@ Future<Map<String, dynamic>?> showFilterPopup(
     });
   }
 
-  void scrollToCountries(String treatment) {
-    if (listData.containsKey(treatment)) {
-      List<String> countries = listData[treatment]!.keys.toList();
-      if (countries.isNotEmpty) {
-        scrollToSection(0.5);
-      }
+void scrollToCountries(String treatment) {
+  if (!Platform.isIOS) return; 
+
+  if (listData.containsKey(treatment)) {
+    List<String> countries = listData[treatment]!.keys.toList();
+    if (countries.isNotEmpty) {
+      scrollToSection(0.5);
     }
   }
+}
 
-  void scrollToCities() {
-    scrollToSection(100);
-  }
+void scrollToCities() {
+  if (!Platform.isIOS) return; 
 
+  scrollToSection(100);
+}
 
   String getTranslatedKey(String baseKey, String langCode) {
     switch (langCode.toLowerCase()) {
