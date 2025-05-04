@@ -8,7 +8,8 @@ import 'package:logger/logger.dart';
 import 'package:flutter_application_1/favorite_provider.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io';
+import 'package:animated_text_kit/animated_text_kit.dart';
+
 var logger = Logger();
 
 class Homepage extends ConsumerStatefulWidget {
@@ -150,7 +151,6 @@ class _HomepageState extends ConsumerState<Homepage> {
     }
   }
 
-  
   void filterClinics(String query) {
     final q = query.trim().toLowerCase();
 
@@ -168,6 +168,7 @@ class _HomepageState extends ConsumerState<Homepage> {
       }
     });
   }
+
   void onSearchChanged() {
     if (searchController.text.isNotEmpty) {
       filterClinics(searchController.text);
@@ -191,6 +192,7 @@ class _HomepageState extends ConsumerState<Homepage> {
     final favoriteClinics = ref.watch(favoriteProvider.notifier);
     final favorites = ref.watch(favoriteProvider);
     final colorScheme = theme.colorScheme;
+    final appLocalizations = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -218,7 +220,7 @@ class _HomepageState extends ConsumerState<Homepage> {
                           controller: searchController,
                           onChanged: (value) => onSearchChanged(),
                           decoration: InputDecoration(
-                            hintText: "Search",
+                            hintText: appLocalizations!.translate("search"),
                             hintStyle: TextStyle(color: Colors.white),
                             prefixIcon: Icon(Icons.search, color: Colors.white),
                             fillColor: Colors.white24,
@@ -535,9 +537,30 @@ class _HomepageState extends ConsumerState<Homepage> {
                         ],
                       )
                       : Center(
-                        child: Text(
-                          "No clinics available",
-                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                        child: AnimatedTextKit(
+                          animatedTexts: [
+                            TypewriterAnimatedText(
+                              'OtaMed',
+                              textStyle: TextStyle(
+                                fontSize: 38.0,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blueAccent,
+                                letterSpacing: 10,
+                              ),
+                              speed: Duration(milliseconds: 200),
+                            ),
+                            FadeAnimatedText(
+                              'Welcome Back!',
+                              textStyle: TextStyle(
+                                fontSize: 32.0,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue,
+                              ),
+                              duration: Duration(seconds: 2),
+                            ),
+                          ],
+                          totalRepeatCount: 1,
+                          pause: Duration(milliseconds: 500),
                         ),
                       ),
             ),
@@ -609,22 +632,18 @@ Future<Map<String, dynamic>?> showFilterPopup(
     });
   }
 
-void scrollToCountries(String treatment) {
-  if (!Platform.isIOS) return; 
-
-  if (listData.containsKey(treatment)) {
-    List<String> countries = listData[treatment]!.keys.toList();
-    if (countries.isNotEmpty) {
-      scrollToSection(0.5);
+  void scrollToCountries(String treatment) {
+    if (listData.containsKey(treatment)) {
+      List<String> countries = listData[treatment]!.keys.toList();
+      if (countries.isNotEmpty) {
+        scrollToSection(0.5);
+      }
     }
   }
-}
 
-void scrollToCities() {
-  if (!Platform.isIOS) return; 
-
-  scrollToSection(100);
-}
+  void scrollToCities() {
+    scrollToSection(100);
+  }
 
   String getTranslatedKey(String baseKey, String langCode) {
     switch (langCode.toLowerCase()) {
@@ -808,7 +827,7 @@ void scrollToCities() {
                     Padding(
                       padding: const EdgeInsets.only(top: 10, bottom: 5),
                       child: Text(
-                        "Type of Treatment",
+                        appLocalizations.translate('type_treatment'),
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -885,7 +904,7 @@ void scrollToCities() {
                       Padding(
                         padding: const EdgeInsets.only(top: 20, bottom: 5),
                         child: Text(
-                          "Country",
+                          appLocalizations.translate('country'),
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -917,8 +936,7 @@ void scrollToCities() {
                                     border: Border.all(
                                       color:
                                           theme.brightness == Brightness.dark
-                                              ? Colors
-                                                  .white 
+                                              ? Colors.white
                                               : Colors.black,
                                     ),
 
@@ -944,7 +962,7 @@ void scrollToCities() {
                       Padding(
                         padding: const EdgeInsets.only(top: 20, bottom: 5),
                         child: Text(
-                          "Cities in $selectedCountry",
+                          appLocalizations.translate("city"),
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
