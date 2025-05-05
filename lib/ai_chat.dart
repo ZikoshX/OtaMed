@@ -544,69 +544,68 @@ class _AiChatState extends State<AiChat> {
     }
   }
 
-Future<void> _handleFinalOption(String option) async {
-  if (selectedCategory == null || selectedCountry == null) {
-    setState(() {
-      messages.add({
-        "isUser": false,
-        "text": _getCategorySelectMessage(selectedLanguageCode!),
+  Future<void> _handleFinalOption(String option) async {
+    if (selectedCategory == null || selectedCountry == null) {
+      setState(() {
+        messages.add({
+          "isUser": false,
+          "text": _getCategorySelectMessage(selectedLanguageCode!),
+        });
       });
-    });
-    return;
-  }
-
-  final loadingMessage = _getLoadingMessage(selectedLanguageCode!);
-
-  setState(() {
-    messages.add({"isUser": false, "text": loadingMessage});
-  });
-
-  String response = "";
-  final options = _getOptionButtons(selectedLanguageCode!);
-
-  if (option == options[0]) {
-    response = await _geminiAI.analyzeClinic(
-      selectedClinic!,
-      selectedCategory!,
-      selectedCountry!,
-      selectedLanguageCode!,
-    );
-  } else if (option == options[1]) {
-    response = await _geminiAI.findArticles(
-      selectedClinic!,
-      selectedLanguageCode!,
-    );
-  }
-  final remainingOption = option == options[0] ? options[1] : options[0];
-
-  setState(() {
-    messages.removeLast(); 
-
-    if (response.isNotEmpty) {
-      messages.add({"isUser": false, "text": response});
-    } else {
-      messages.add({
-        "isUser": false,
-        "text": "Sorry, no response available.",
-      });
+      return;
     }
-    final optionButtons = <String>[
-      remainingOption,
-      getButtonLabel("Show Clinic List", selectedLanguageCode!),
-      getButtonLabel("Select New Category", selectedLanguageCode!),
-    ];
 
-    messages.add({
-      "isUser": false,
-      "buttons": optionButtons,
-      "category": selectedCategory,
-      "country": selectedCountry,
+    final loadingMessage = _getLoadingMessage(selectedLanguageCode!);
+
+    setState(() {
+      messages.add({"isUser": false, "text": loadingMessage});
     });
-  });
 
-  _saveChatHistory();
-}
+    String response = "";
+    final options = _getOptionButtons(selectedLanguageCode!);
 
+    if (option == options[0]) {
+      response = await _geminiAI.analyzeClinic(
+        selectedClinic!,
+        selectedCategory!,
+        selectedCountry!,
+        selectedLanguageCode!,
+      );
+    } else if (option == options[1]) {
+      response = await _geminiAI.findArticles(
+        selectedClinic!,
+        selectedLanguageCode!,
+      );
+    }
+    final remainingOption = option == options[0] ? options[1] : options[0];
+
+    setState(() {
+      messages.removeLast();
+
+      if (response.isNotEmpty) {
+        messages.add({"isUser": false, "text": response});
+      } else {
+        messages.add({
+          "isUser": false,
+          "text": "Sorry, no response available.",
+        });
+      }
+      final optionButtons = <String>[
+        remainingOption,
+        getButtonLabel("Show Clinic List", selectedLanguageCode!),
+        getButtonLabel("Select New Category", selectedLanguageCode!),
+      ];
+
+      messages.add({
+        "isUser": false,
+        "buttons": optionButtons,
+        "category": selectedCategory,
+        "country": selectedCountry,
+      });
+    });
+
+    _saveChatHistory();
+  }
 
   void _askCategorySelection() {
     setState(() {
@@ -714,11 +713,11 @@ Future<void> _handleFinalOption(String option) async {
                 return {"name": clinicName};
               })
               .where((c) => c["name"] != "")
-              .toList(); // фильтруем пустые
+              .toList();
 
       setState(() {
         clinics = fetchedClinics;
-        selectedClinic = null; // 🔧 сбрасываем выбор, чтобы показать список
+        selectedClinic = null;
 
         if (fetchedClinics.isEmpty) {
           messages.add({
@@ -811,9 +810,14 @@ Future<void> _handleFinalOption(String option) async {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
+        iconTheme: IconThemeData(color: Colors.white),
         title: Text(
           appLocalizations.translate('ai_chat'),
-          style: theme.appBarTheme.titleTextStyle,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: Colors.blueAccent,
       ),
@@ -832,7 +836,9 @@ Future<void> _handleFinalOption(String option) async {
                 color: Theme.of(context).iconTheme.color,
               ),
               title: Text(
-                isClinicMode ? "Main" : "Clinics",
+                isClinicMode
+                    ? appLocalizations.translate('main')
+                    : appLocalizations.translate('clinics'),
                 style: TextStyle(color: textColor),
               ),
               onTap: _toggleClinicMode,
@@ -916,10 +922,10 @@ Future<void> _handleFinalOption(String option) async {
                         children: [
                           Image.asset("images/star.png", width: 38, height: 38),
                           const SizedBox(width: 10),
-                          const Text(
-                            "Hi! You can ask anything.",
+                          Text(
+                            appLocalizations.translate('text'),
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 14,
                               color: Colors.grey,
                               fontWeight: FontWeight.w700,
                             ),
@@ -946,7 +952,7 @@ Future<void> _handleFinalOption(String option) async {
                                 color:
                                     isUser
                                         ? Colors.blueAccent
-                                        : Colors.grey[300],
+                                        : Colors.grey[400],
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child:
@@ -964,7 +970,7 @@ Future<void> _handleFinalOption(String option) async {
                                         },
                                         styleSheet: MarkdownStyleSheet(
                                           a: TextStyle(
-                                            color: Colors.blue,
+                                            color: const Color.fromARGB(255, 15, 94, 130),
                                             decoration:
                                                 TextDecoration.underline,
                                           ),
@@ -1132,7 +1138,7 @@ Future<void> _handleFinalOption(String option) async {
                                       : (selectedClinic == null
                                           ? "Select a clinic"
                                           : "Choose an option")))
-                              : "Ask anything...",
+                              : appLocalizations.translate('ask_any'),
                       hintStyle: TextStyle(
                         color: Colors.grey[400],
                         fontSize: 15,
