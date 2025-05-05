@@ -39,7 +39,34 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ai_chat => 'ИИ чат';
 
   @override
+  String get home => 'Главная';
+
+  @override
+  String get create => 'Добавить';
+
+  @override
   String get search => 'искать';
+
+  @override
+  String get main => 'Главная';
+
+  @override
+  String get available => 'Доступные клиники';
+
+  @override
+  String get country => 'Страны';
+
+  @override
+  String get city => 'Города';
+
+  @override
+  String get url => 'Ссылка сайта';
+
+  @override
+  String get favorite => 'Пока нет любимых клиник';
+
+  @override
+  String get text => 'Привет! Можешь спрашивать что угодно.';
 
   @override
   String get clinics => 'Клиники';
@@ -51,7 +78,43 @@ class AppLocalizationsRu extends AppLocalizations {
   String get name => 'Имя';
 
   @override
+  String get f_icon => 'Фильтр';
+
+  @override
   String get description => 'Описание';
+
+  @override
+  String get add => 'Добавить';
+
+  @override
+  String get cancel => 'Отмена';
+
+  @override
+  String get save => 'Сохранить';
+
+  @override
+  String get edit => 'Редактировать';
+
+  @override
+  String get message => 'Мы скучали тебя! 🫶';
+
+  @override
+  String get message2 => 'Возвращайтесь и продолжайте поиск. Возможно, вы найдете то, что вам нужно!';
+
+  @override
+  String get rating_desc => 'Рейтинг';
+
+  @override
+  String get review_desc => 'ОТзыв';
+
+  @override
+  String get phone_number => 'Номер телефона';
+
+  @override
+  String get avail => 'Доступность';
+
+  @override
+  String get ask_any => 'Начинайте чат';
 
   @override
   String get category => 'Категория';
@@ -123,7 +186,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get contact => 'Контакты клиник';
 
   @override
-  String get contact_answer => 'Если у вас есть вопросы, пишите нам на официальную почту! \notamed2025@gmail.com';
+  String get contact_answer => 'Если у вас есть вопросы, пишите нам на официальную почту!';
 
   @override
   String get important => 'ВАЖНО!!!! \nОтказ от ответственности';
