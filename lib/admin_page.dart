@@ -254,30 +254,6 @@ void fetchUserDatas() async {
                 ],
               ),
               const SizedBox(height: 20),
-                    InkWell(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const HelpScreen()),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10.0),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                border: Border.all(color: Colors.grey.shade400),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child:  ListTile(
-                leading: Icon(Icons.help, color: Colors.blueGrey),
-                title: Text(
-                      appLocalizations.translate('help'),
-                      style: TextStyle(color: textColor),
-                    ),
-              ),
-            ),
-          ),
-              const SizedBox(height: 20),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10.0),
                 decoration: BoxDecoration(
