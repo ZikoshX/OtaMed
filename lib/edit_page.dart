@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/localization/app_localization.dart';
 import 'package:logger/logger.dart';
 
 var logger = Logger();
@@ -121,12 +122,13 @@ class _EditPageState extends State<EditPage> {
     final reviewLabel = getTranslatedReviewLabel(widget.langCode);
     final phoneLabel = getTranslatedPhoneLabel(widget.langCode);
     final websiteLabel = getTranslatedWebsiteLabel(widget.langCode);
+    final appLocalizations = AppLocalizations.of(context);
 
 
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      appBar: AppBar(title: const Text("Edit Clinic")),
+      appBar: AppBar(title:  Text(appLocalizations!.translate('edit'))),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -167,8 +169,8 @@ class _EditPageState extends State<EditPage> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    child: const Text(
-                      "Cancel",
+                    child:  Text(
+                      appLocalizations!.translate('cancel'),
                       style: TextStyle(
                         color: Colors.black87,
                         fontWeight: FontWeight.bold,
@@ -187,8 +189,8 @@ class _EditPageState extends State<EditPage> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    child: const Text(
-                      "Save",
+                    child: Text(
+                      appLocalizations.translate('save'),
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
