@@ -47,22 +47,45 @@ class _CreateClinicPageState extends State<CreateClinicPage> {
   String? selectedCategoryRu;
   String? selectedCategoryKk;
 
+  // Function to get the highest clinic ID
+Future<String> getNextClinicId() async {
+  try {
+    // Query to get all clinic IDs
+    QuerySnapshot snapshot = await firestore
+        .collection('translation_clinics')
+        .orderBy('clinic_id', descending: true) 
+        .limit(1) 
+        .get();
+
+    if (snapshot.docs.isEmpty) {
+      return "clinic_1";
+    } else {
+      String latestId = snapshot.docs.first.id;
+      int latestNumber = int.parse(latestId.split('_')[1]);
+      return "clinic_${latestNumber + 1}";
+    }
+  } catch (e) {
+    logger.w("Error getting next clinic ID: $e");
+    return "clinic_1"; 
+  }
+}
+
   Future<void> uploadClinic() async {
     final name = nameController.text.trim();
     final description = descriptionController.text.trim();
-    final category = categoryController.text.trim();
+    final category = selectedCategoryEn ?? '';
     final country = countryController.text.trim();
     final city = cityController.text.trim();
     final address = addressController.text.trim();
     final nameKZ = nameKZController.text.trim();
     final descriptionKZ = descriptionKZController.text.trim();
-    final categoryKZ = categoryKZController.text.trim();
+    final categoryKZ = selectedCategoryKk ?? '';
     final countryKZ = countryKZController.text.trim();
     final cityKZ = cityKZController.text.trim();
     final addressKZ = addressKZController.text.trim();
     final nameRU = nameRUController.text.trim();
     final descriptionRU = descriptionRUController.text.trim();
-    final categoryRU = categoryRUController.text.trim();
+    final categoryRU = selectedCategoryRu ?? '';
     final countryRU = countryRUController.text.trim();
     final cityRU = cityRUController.text.trim();
     final addressRU = addressRUController.text.trim();
@@ -80,39 +103,41 @@ class _CreateClinicPageState extends State<CreateClinicPage> {
       return;
     }
 
-    try {
-      await firestore.collection('translation_clinics').add({
-        'Clinics': name,
-        'Description': description,
-        'Category': category,
-        'Country': country,
-        'City': city,
-        'Address': address,
-        'Phone_number': phone,
-        'rating': rating,
-        'Review': review,
-        'Site_url': siteUrl,
-        'Status_working': statusWork,
-        'Availability': availability,
-        'Clinics_KZ': nameKZ,
-        'Description_kZ': descriptionKZ,
-        'Category_KZ': categoryKZ,
-        'Country_KZ': countryKZ,
-        'City_KZ': cityKZ,
-        'Address_KZ': addressKZ,
-        'Clinics_RU': nameRU,
-        'Description_RU': descriptionRU,
-        'Category_RU': categoryRU,
-        'Country_RU': countryRU,
-        'City_RU': cityRU,
-        'Address_RU': addressRU,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+try {
+  String newClinicId = await getNextClinicId();
 
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Clinic uploaded successfully")),
-      );
+  await firestore.collection('translation_clinics').doc(newClinicId).set({
+    'Clinics': name,
+    'Description': description,
+    'Category': category,
+    'Country': country,
+    'City': city,
+    'Address': address,
+    'Phone_number': phone,
+    'rating': rating,
+    'Review': review,
+    'Site_url': siteUrl,
+    'Status_working': statusWork,
+    'Availability': availability,
+    'Clinics_KZ': nameKZ,
+    'Description_kZ': descriptionKZ,
+    'Category_KZ': categoryKZ,
+    'Country_KZ': countryKZ,
+    'City_KZ': cityKZ,
+    'Address_KZ': addressKZ,
+    'Clinics_RU': nameRU,
+    'Description_RU': descriptionRU,
+    'Category_RU': categoryRU,
+    'Country_RU': countryRU,
+    'City_RU': cityRU,
+    'Address_RU': addressRU,
+    'createdAt': FieldValue.serverTimestamp(),
+  });
+
+  // ignore: use_build_context_synchronously
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text("Clinic uploaded successfully")),
+  );
 
       nameController.clear();
       addressController.clear();
@@ -159,52 +184,50 @@ class _CreateClinicPageState extends State<CreateClinicPage> {
     final AppLocalizationsRu ru = AppLocalizationsRu();
     final AppLocalizationsKk kk = AppLocalizationsKk();
 
-    final List<DropdownMenuItem<String>> englishItems = [
-      DropdownMenuItem(value: 'plastic', child: Text(en.plastic_surgery)),
-      DropdownMenuItem(value: 'orthopedic', child: Text(en.orthopedic)),
-      DropdownMenuItem(value: 'oncological', child: Text(en.oncological)),
-      DropdownMenuItem(value: 'neurosurgery', child: Text(en.neurosurgery)),
-      DropdownMenuItem(value: 'ent', child: Text(en.ent)),
-      DropdownMenuItem(
-        value: 'gastroenterology',
-        child: Text(en.gastroenterology),
-      ),
-      DropdownMenuItem(value: 'urology', child: Text(en.urology)),
-      DropdownMenuItem(value: 'ophthalmology', child: Text(en.ophthalmology)),
-      DropdownMenuItem(value: 'dermatology', child: Text(en.dermatology)),
-      DropdownMenuItem(value: 'physical', child: Text(en.physical)),
-    ];
+final List<DropdownMenuItem<String>> englishItems = [
+  DropdownMenuItem(value: en.plastic_surgery, child: Text(en.plastic_surgery)),
+  DropdownMenuItem(value: en.orthopedic, child: Text(en.orthopedic)),
+  DropdownMenuItem(value: en.oncological, child: Text(en.oncological)),
+  DropdownMenuItem(value: en.neurosurgery, child: Text(en.neurosurgery)),
+  DropdownMenuItem(value: en.ent, child: Text(en.ent)),
+  DropdownMenuItem(value: en.gastroenterology, child: Text(en.gastroenterology)),
+  DropdownMenuItem(value: en.urology, child: Text(en.urology)),
+  DropdownMenuItem(value: en.ophthalmology, child: Text(en.ophthalmology)),
+  DropdownMenuItem(value: en.dermatology, child: Text(en.dermatology)),
+  DropdownMenuItem(value: en.physical, child: Text(en.physical)),
+];
+
 
     final List<DropdownMenuItem<String>> russianItems = [
-      DropdownMenuItem(value: 'plastic', child: Text(ru.plastic_surgery)),
-      DropdownMenuItem(value: 'orthopedic', child: Text(ru.orthopedic)),
-      DropdownMenuItem(value: 'oncological', child: Text(ru.oncological)),
-      DropdownMenuItem(value: 'neurosurgery', child: Text(ru.neurosurgery)),
-      DropdownMenuItem(value: 'ent', child: Text(ru.ent)),
+      DropdownMenuItem(value: ru.plastic_surgery, child: Text(ru.plastic_surgery)),
+      DropdownMenuItem(value: ru.orthopedic, child: Text(ru.orthopedic)),
+      DropdownMenuItem(value: ru.oncological, child: Text(ru.oncological)),
+      DropdownMenuItem(value: ru.neurosurgery, child: Text(ru.neurosurgery)),
+      DropdownMenuItem(value: ru.ent, child: Text(ru.ent)),
       DropdownMenuItem(
-        value: 'gastroenterology',
+        value: ru.gastroenterology,
         child: Text(ru.gastroenterology),
       ),
-      DropdownMenuItem(value: 'urology', child: Text(ru.urology)),
-      DropdownMenuItem(value: 'ophthalmology', child: Text(ru.ophthalmology)),
-      DropdownMenuItem(value: 'dermatology', child: Text(ru.dermatology)),
-      DropdownMenuItem(value: 'physical', child: Text(ru.physical)),
+      DropdownMenuItem(value: ru.urology, child: Text(ru.urology)),
+      DropdownMenuItem(value: ru.ophthalmology, child: Text(ru.ophthalmology)),
+      DropdownMenuItem(value: ru.dermatology, child: Text(ru.dermatology)),
+      DropdownMenuItem(value: ru.physical, child: Text(ru.physical)),
     ];
 
     final List<DropdownMenuItem<String>> kazakhItems = [
-      DropdownMenuItem(value: 'plastic', child: Text(kk.plastic_surgery)),
-      DropdownMenuItem(value: 'orthopedic', child: Text(kk.orthopedic)),
-      DropdownMenuItem(value: 'oncological', child: Text(kk.oncological)),
-      DropdownMenuItem(value: 'neurosurgery', child: Text(kk.neurosurgery)),
-      DropdownMenuItem(value: 'ent', child: Text(kk.ent)),
+      DropdownMenuItem(value: kk.plastic_surgery, child: Text(kk.plastic_surgery)),
+      DropdownMenuItem(value: kk.orthopedic, child: Text(kk.orthopedic)),
+      DropdownMenuItem(value: kk.oncological, child: Text(kk.oncological)),
+      DropdownMenuItem(value: kk.neurosurgery, child: Text(kk.neurosurgery)),
+      DropdownMenuItem(value: kk.ent, child: Text(kk.ent)),
       DropdownMenuItem(
-        value: 'gastroenterology',
+        value: kk.gastroenterology,
         child: Text(kk.gastroenterology),
       ),
-      DropdownMenuItem(value: 'urology', child: Text(kk.urology)),
-      DropdownMenuItem(value: 'ophthalmology', child: Text(kk.ophthalmology)),
-      DropdownMenuItem(value: 'dermatology', child: Text(kk.dermatology)),
-      DropdownMenuItem(value: 'physical', child: Text(kk.physical)),
+      DropdownMenuItem(value: kk.urology, child: Text(kk.urology)),
+      DropdownMenuItem(value: kk.ophthalmology, child: Text(kk.ophthalmology)),
+      DropdownMenuItem(value: kk.dermatology, child: Text(kk.dermatology)),
+      DropdownMenuItem(value: kk.physical, child: Text(kk.physical)),
     ];
 
     if (appLocalizations == null) {
@@ -312,6 +335,14 @@ class _CreateClinicPageState extends State<CreateClinicPage> {
                 countryController,
               ),
               buildTextField(
+                "In Kazakh/На казахском/Қазақша",
+                countryKZController,
+              ),
+              buildTextField(
+                "In Russian/На русском/Орысша",
+                countryRUController,
+              ),
+              buildTextField(
                 "City \nIn English/На английском/Ағылшынша",
                 cityController,
               ),
@@ -379,8 +410,8 @@ class _CreateClinicPageState extends State<CreateClinicPage> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      child: const Text(
-                        "Cancel",
+                      child: Text(
+                          appLocalizations.translate("cancel"),
                         style: TextStyle(
                           color: Colors.black87,
                           fontWeight: FontWeight.bold,
@@ -399,8 +430,8 @@ class _CreateClinicPageState extends State<CreateClinicPage> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      child: const Text(
-                        "Add",
+                      child:  Text(
+                        appLocalizations.translate("add"),
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
