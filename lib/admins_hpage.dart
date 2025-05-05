@@ -90,7 +90,6 @@ class _HomeAdminpageState extends ConsumerState<HomeAdminpage> {
     final translatedCountryKey = getTranslatedKey('Country', langCode);
     final translatedCityKey = getTranslatedKey('City', langCode);
     final translatedClinicsKey = getTranslatedKey('Clinics', langCode);
-    final translatedAddressKey = getTranslatedKey('Address', langCode);
     final translatedDescriptionKey = getTranslatedKey('Description', langCode);
 
     logger.w('Localized category name: $localizedCategory');
@@ -112,7 +111,7 @@ class _HomeAdminpageState extends ConsumerState<HomeAdminpage> {
                 "category": doc[translatedCategoryKey] ?? doc['Category'],
                 "City": doc[translatedCityKey] ?? doc['City'],
                 "Country": doc[translatedCountryKey] ?? doc['Country'],
-                "address": doc[translatedAddressKey] ?? doc['Address'],
+                "address":  doc['Address'],
                 "phone": doc['Phone_number'],
                 "rating": doc['rating'],
                 "review": doc['Review'],
@@ -751,13 +750,13 @@ Future<Map<String, dynamic>?> showFilterPopup(
     if (listData.containsKey(treatment)) {
       List<String> countries = listData[treatment]!.keys.toList();
       if (countries.isNotEmpty) {
-        scrollToSection(0.5);
+        scrollToSection(200);
       }
     }
   }
 
   void scrollToCities() {
-    scrollToSection(100);
+    scrollToSection(150);
   }
 
   String getTranslatedKey(String baseKey, String langCode) {
@@ -846,7 +845,7 @@ Future<Map<String, dynamic>?> showFilterPopup(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          "Filter",
+                          appLocalizations!.translate('f_icon'),
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -864,7 +863,7 @@ Future<Map<String, dynamic>?> showFilterPopup(
                     Padding(
                       padding: const EdgeInsets.only(top: 10, bottom: 5),
                       child: Text(
-                        appLocalizations!.translate('type_operations'),
+                        appLocalizations.translate('type_operations'),
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
