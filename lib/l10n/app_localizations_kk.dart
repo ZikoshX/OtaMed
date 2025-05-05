@@ -39,7 +39,34 @@ class AppLocalizationsKk extends AppLocalizations {
   String get ai_chat => 'ЖИ чат';
 
   @override
+  String get home => 'Басты бет';
+
+  @override
+  String get create => 'Қосу';
+
+  @override
   String get search => 'іздеу';
+
+  @override
+  String get main => 'Негізгі';
+
+  @override
+  String get available => 'Қолжетімді клиникалар';
+
+  @override
+  String get country => 'Мемлекеттер';
+
+  @override
+  String get city => 'Қалалар';
+
+  @override
+  String get url => 'Сайттың сілтемесі';
+
+  @override
+  String get favorite => 'Таңдаулы клиникалар әлі жоқ';
+
+  @override
+  String get text => 'Сәлеметсіз бе! Сіз кез келген нәрсені \nсұрай аласыз.';
 
   @override
   String get clinics => 'Клиникалар';
@@ -51,7 +78,43 @@ class AppLocalizationsKk extends AppLocalizations {
   String get name => 'Аты';
 
   @override
+  String get f_icon => 'Фильтр';
+
+  @override
   String get description => 'Сипаттамалар';
+
+  @override
+  String get add => 'Қосу';
+
+  @override
+  String get cancel => 'Болдырмау';
+
+  @override
+  String get save => 'Сақтау';
+
+  @override
+  String get edit => 'Өңдеу';
+
+  @override
+  String get message => 'Сені сағындық! 🫶';
+
+  @override
+  String get message2 => 'Қайта кіріп, іздеуді жалғастырыңыз. Сізге қажет нәрсені таба аласыз!';
+
+  @override
+  String get rating_desc => 'Рейтинг';
+
+  @override
+  String get review_desc => 'Пікір';
+
+  @override
+  String get phone_number => 'Телефон нөмірі';
+
+  @override
+  String get avail => 'Қолжетімді';
+
+  @override
+  String get ask_any => 'Чатты бастаңыз';
 
   @override
   String get category => 'Категория';
@@ -123,7 +186,7 @@ class AppLocalizationsKk extends AppLocalizations {
   String get contact => 'Клиника контактілері';
 
   @override
-  String get contact_answer => 'Қолданбада мәселе болса, ресми поштамызға жазыңыз! \notamed2025@gmail.com';
+  String get contact_answer => 'Қолданбада мәселе болса, ресми поштамызға жазыңыз!';
 
   @override
   String get important => 'Маңызды!!!! \nЖауапкершіліктен бас тарту';
