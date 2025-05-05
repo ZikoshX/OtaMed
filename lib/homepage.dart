@@ -93,7 +93,6 @@ class _HomepageState extends ConsumerState<Homepage> {
     final translatedCountryKey = getTranslatedKey('Country', langCode);
     final translatedCityKey = getTranslatedKey('City', langCode);
     final translatedClinicsKey = getTranslatedKey('Clinics', langCode);
-    final translatedAddressKey = getTranslatedKey('Address', langCode);
     final translatedDescriptionKey = getTranslatedKey('Description', langCode);
 
     logger.w('Localized category name: $localizedCategory');
@@ -112,7 +111,7 @@ class _HomepageState extends ConsumerState<Homepage> {
     for (var doc in categorySnap.docs) {
       localizedClinics.add({
         "name": doc[translatedClinicsKey] ?? doc['Clinics'],
-        "address": doc[translatedAddressKey] ?? doc['Address'],
+        "address": doc['Address'],
         "phone": doc['Phone_number'],
         "rating": doc['rating'],
         "review": doc['Review'],
@@ -348,7 +347,7 @@ class _HomepageState extends ConsumerState<Homepage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Available Clinics:',
+                            appLocalizations.translate("available"),
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -636,13 +635,13 @@ Future<Map<String, dynamic>?> showFilterPopup(
     if (listData.containsKey(treatment)) {
       List<String> countries = listData[treatment]!.keys.toList();
       if (countries.isNotEmpty) {
-        scrollToSection(0.5);
+        scrollToSection(100);
       }
     }
   }
 
   void scrollToCities() {
-    scrollToSection(100);
+    scrollToSection(200);
   }
 
   String getTranslatedKey(String baseKey, String langCode) {
@@ -737,7 +736,7 @@ Future<Map<String, dynamic>?> showFilterPopup(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          "Filter",
+                          appLocalizations!.translate('f_icon'),
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -755,7 +754,7 @@ Future<Map<String, dynamic>?> showFilterPopup(
                     Padding(
                       padding: const EdgeInsets.only(top: 10, bottom: 5),
                       child: Text(
-                        appLocalizations!.translate('type_operations'),
+                        appLocalizations.translate('type_operations'),
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
