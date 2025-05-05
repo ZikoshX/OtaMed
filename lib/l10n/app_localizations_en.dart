@@ -39,7 +39,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ai_chat => 'AI Chat';
 
   @override
+  String get home => 'Home';
+
+  @override
+  String get create => 'Create';
+
+  @override
   String get search => 'search';
+
+  @override
+  String get main => 'Main';
+
+  @override
+  String get available => 'Available clinics';
+
+  @override
+  String get country => 'Countries';
+
+  @override
+  String get city => 'City';
+
+  @override
+  String get url => 'Site_Url';
+
+  @override
+  String get favorite => 'No favorite clinics yet';
+
+  @override
+  String get text => 'Hi! You can ask anything.';
 
   @override
   String get clinics => 'Clinics';
@@ -51,7 +78,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get name => 'Name';
 
   @override
+  String get f_icon => 'Filter';
+
+  @override
   String get description => 'Description';
+
+  @override
+  String get add => 'Add';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get edit => 'Edit';
+
+  @override
+  String get message => 'We miss you! 🫶';
+
+  @override
+  String get message2 => 'Come back and continue your search. You might find what you need!';
+
+  @override
+  String get rating_desc => 'Rating';
+
+  @override
+  String get review_desc => 'Review';
+
+  @override
+  String get phone_number => 'Phone number';
+
+  @override
+  String get avail => 'Availablilty';
+
+  @override
+  String get ask_any => 'Ask anything';
 
   @override
   String get category => 'Category';
@@ -123,7 +186,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contact => 'Clinic contacts';
 
   @override
-  String get contact_answer => 'If you have troubles in app or have questions, you can write to our official mail: \notamed2025@gmail.com';
+  String get contact_answer => 'If you have troubles in app or have questions, you can write to our official mail:';
 
   @override
   String get important => 'IMPORTANT!!!! \nDisclaimer';
